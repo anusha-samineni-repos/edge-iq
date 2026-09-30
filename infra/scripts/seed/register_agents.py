@@ -204,17 +204,17 @@ def main() -> int:
         return 0
 
     try:
-        from azure.ai.projects import AIProjectClient  # type: ignore
+        from azure.ai.agents import AgentsClient  # type: ignore
         from azure.identity import DefaultAzureCredential  # type: ignore
     except ImportError:
         raise SystemExit(
-            "azure-ai-projects and azure-identity are required.\n"
-            "  pip install azure-ai-projects azure-identity"
+            "azure-ai-agents and azure-identity are required.\n"
+            "  pip install azure-ai-agents azure-identity"
         )
 
-    client = AIProjectClient(endpoint=args.project_endpoint,
-                             credential=DefaultAzureCredential())
-    agents_api = client.agents
+    agents_api = AgentsClient(endpoint=args.project_endpoint,
+                              credential=DefaultAzureCredential(
+                                  exclude_interactive_browser_credential=True))
 
     existing = {}
     for agent in agents_api.list_agents():
@@ -235,18 +235,42 @@ def main() -> int:
 
     for item in ordered:
         name = item["name"]
+        tools = []
+        for tool in item["tools"]:
+            if tool["type"] == "mcp":
+                if "localhost" in tool["server_url"] or "127.0.0.1" in tool["server_url"]:
+                    continue  # Foundry cannot reach a local gateway; attach after MCP is deployed.
+                # Foundry requires labels matching ^[a-zA-Z0-9_]+$; approval
+                # mode is set per run, not on the definition.
+                tools.append({
+                    "type": "mcp",
+                    "server_label": tool["server_label"].replace("-", "_"),
+                    "server_url": tool["server_url"],
+                    "allowed_tools": [],
+                })
+            elif tool["type"] == "connected_agent":
+                target = existing.get(f"edgeiq-{tool['name']}")
+                if target:
+                    tools.append({
+                        "type": "connected_agent",
+                        "connected_agent": {
+                            "id": target,
+                            "name": tool["name"].replace("-", "_"),
+                            "description": tool["description"][:500],
+                        },
+                    })
         payload = {
             "model": item["model"],
             "name": name,
-            "description": item["description"],
+            "description": item["description"][:512],
             "instructions": item["instructions"],
             "temperature": item["temperature"],
-            "tools": item["tools"],
-            "metadata": item["metadata"],
+            "tools": tools,
+            "metadata": {k: str(v)[:512] for k, v in item["metadata"].items()},
         }
         if name in existing:
             agents_api.update_agent(agent_id=existing[name], **payload)
-            print(f"  updated {name}")
+            print(f"  updated {name}  ({existing[name]})")
         else:
             created = agents_api.create_agent(**payload)
             existing[name] = created.id
