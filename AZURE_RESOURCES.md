@@ -83,6 +83,8 @@ What I checked: Asset Health IQ for vibration severity, ISO 10816-3 standards, f
 
 What this run confirms:
 
+![Test run outcome](<./docs/images/Test-Run Outcome.png>)
+
 - The orchestrator run completes.
 - It routes the question to the **asset-health** specialist.
 - It returns a recommended action.
