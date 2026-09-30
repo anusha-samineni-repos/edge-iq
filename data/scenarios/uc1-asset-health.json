@@ -1,0 +1,57 @@
+{
+  "$schema": "./scenario.schema.json",
+  "id": "UC1",
+  "title": "Asset health and predictive maintenance",
+  "summary": "A raw water pump develops bearing degradation. Edge IQ detects the trend, classifies it against ISO 10816-3, estimates remaining useful life and drafts a work order that a planner must approve.",
+  "primaryAgent": "asset-health",
+  "supportingAgents": ["maintenance-planner", "knowledge-navigator"],
+  "mcpServers": ["historian", "asset_registry", "work_order"],
+  "iqLayers": {
+    "fabricIq": "Vibration history and the asset record, resolved through the water ontology.",
+    "foundryIq": "ISO 10816-3 severity bands and the pump overhaul SOP.",
+    "workIq": "Prior Teams threads and the maintenance plan for this asset."
+  },
+  "seededFault": {
+    "device": "WTP-01-PUMP-003",
+    "site": "WTP-01",
+    "signal": "vibration_rms_mm_s",
+    "behaviour": "Exponential rise beginning 12 days ago, reaching 7.9 mm/s today.",
+    "why": "7.9 mm/s puts a 75 kW machine in ISO 10816-3 zone D - unacceptable, damage is occurring. The 15-75 kW band would call the same value zone C, which is why the agent must read rated power from the asset registry rather than assume a threshold.",
+    "linkedRecords": {
+      "alarm": "ALM-00001",
+      "workOrder": "WO-09001"
+    },
+    "tunableIn": "data/generators/generate_telemetry.py -> SCENARIO['uc1_peak_vibration']"
+  },
+  "script": [
+    {
+      "step": 1,
+      "ask": "Vibration on WTP-01-PUMP-003 has been climbing. What is the ISO 10816-3 zone, and what should we do?",
+      "expect": "Routes to asset-health. Reads rated power (75 kW) from the asset registry, places 7.9 mm/s in zone D, and cites the ISO 10816-3 knowledge article.",
+      "watchFor": "The route panel should name asset-health, and the evidence list should include the ISO standard - not just telemetry. An answer with no standard cited is pattern-matching, not engineering."
+    },
+    {
+      "step": 2,
+      "ask": "How long have we got before it fails?",
+      "expect": "Extrapolates the trend and gives a window with its basis stated, rather than a single confident date.",
+      "watchFor": "Conversation memory - the device is not restated, so the turn only works if history carried forward."
+    },
+    {
+      "step": 3,
+      "ask": "What does our SOP say about a zone D pump, and has anyone already raised this?",
+      "expect": "Foundry IQ returns the overhaul SOP; Work IQ surfaces related M365 activity (placeholder text until Graph is connected).",
+      "watchFor": "The Work IQ layer pill reads 'placeholder' in demo mode. That is the honest answer, not a failure."
+    },
+    {
+      "step": 4,
+      "ask": "Raise a work order for a bearing replacement at the next planned outage.",
+      "expect": "maintenance-planner drafts the work order but does NOT commit it. The approval panel appears.",
+      "watchFor": "pendingApprovals is populated and committed is false. Writes need approved=true AND EDGEIQ_ALLOW_WRITES=true - two independent keys, so neither a model nor a UI click can act alone."
+    }
+  ],
+  "talkingPoints": [
+    "The severity band is read from the asset record, not hardcoded. Change the pump's rated power and the same reading changes zone.",
+    "Every recommendation carries its evidence. Operators can check the standard rather than trusting the model.",
+    "The write is gated. Edge IQ prepares work, a human commits it."
+  ]
+}

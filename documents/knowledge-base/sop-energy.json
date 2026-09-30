@@ -1,0 +1,67 @@
+[
+  {
+    "id": "SOP-NRG-001",
+    "title": "SOP: Pump Energy Efficiency Assessment",
+    "docType": "sop",
+    "classification": "internal",
+    "effectiveDate": "2025-04-01",
+    "reviewDate": "2027-04-01",
+    "owner": "Energy Manager",
+    "assetClasses": ["pump", "motor"],
+    "useCases": ["UC4"],
+    "source": "documents/knowledge-base/sop-energy.json",
+    "content": "CONTEXT. Pumping is typically 60-80% of a water utility's total electricity consumption, and electricity is typically the largest controllable operating cost. Small efficiency gains compound across thousands of running hours.\n\nTHE PRIMARY KPI. Specific energy consumption in kWh per cubic metre pumped. Use SEC, not raw kWh, because it normalises out duty variation - a pump that used more energy last month may simply have pumped more water. SEC rising at constant duty is unambiguous evidence of degradation.\n\nTYPICAL BENCHMARKS. Raw water abstraction 0.10-0.25 kWh/m3. Treatment plant process pumping 0.15-0.40. Distribution booster pumping 0.20-0.50. Wastewater pumping 0.25-0.60. These vary strongly with static head, so compare a pump against its OWN history first and against peers second.\n\nDIAGNOSING A RISING SEC. Impeller and wear-ring wear - flow and head fall while power stays similar; the classic slow degradation. Fouling or partial blockage - head rises, flow falls, power rises. Operating point drift away from best efficiency point - often caused by a changed system curve or a throttled valve. Motor degradation - power rises at constant hydraulic output. Instrument error - always verify the flow meter before condemning the pump.\n\nOPERATING POINT. A pump run far from its best efficiency point wastes energy and damages itself - high radial loads, recirculation and elevated NPSH required. If duty has permanently changed, the correct fix is often a trimmed impeller, a variable speed drive, or a different pump, not more maintenance.\n\nREPORT FORMAT. Always quantify the loss in kWh per year, cost per year and tonnes CO2e per year, and state the assumed tariff and carbon intensity. An energy finding without a number attached does not get funded."
+  },
+  {
+    "id": "SOP-NRG-002",
+    "title": "SOP: Tariff-Aware Pump Scheduling",
+    "docType": "sop",
+    "classification": "internal",
+    "effectiveDate": "2025-04-01",
+    "reviewDate": "2027-04-01",
+    "owner": "Energy Manager",
+    "assetClasses": ["pump"],
+    "useCases": ["UC4"],
+    "source": "documents/knowledge-base/sop-energy.json",
+    "content": "OPPORTUNITY. Where a time-of-use tariff applies, shifting pumping from peak to off-peak periods reduces cost with no change in energy consumed and no capital spend. Reservoir and tower storage is the buffer that makes this possible.\n\nHARD CONSTRAINTS THAT OVERRIDE COST. Minimum and maximum reservoir levels must be respected at all times - storage is first and foremost an emergency and firefighting reserve. Maximum reservoir residence time must be respected; shifting pumping to create long overnight standstill can depress chlorine residual and create a water quality problem that costs far more than the energy saved. Minimum service pressure at the critical point must be maintained. Pump start frequency limits must be respected - excessive starts destroy motors and cost more in maintenance than the tariff saving.\n\nTHE WATER QUALITY TRADE-OFF IS THE ONE PEOPLE MISS. Always check the residence time consequence of any proposed schedule change against SOP-CL2-003 before recommending it. An energy recommendation that creates a compliance risk is not an improvement.\n\nMETHOD. Establish the demand profile. Establish the tariff periods and rates. Identify the storage headroom available. Construct a schedule that fills storage in off-peak periods and draws down through peak, subject to the constraints above. Verify against a hydraulic model before implementation where one exists.\n\nTYPICAL SAVING. 8-20% of pumping cost for a network with reasonable storage, achieved with no capital expenditure.\n\nIMPLEMENTATION. Schedule changes are made through the SCADA control philosophy and require operational approval. Agents propose; operations decide."
+  },
+  {
+    "id": "REF-NRG-001",
+    "title": "Reference: Energy, Cost and Carbon Conversion Factors",
+    "docType": "reference",
+    "classification": "internal",
+    "effectiveDate": "2025-01-01",
+    "reviewDate": "2026-12-31",
+    "owner": "Energy Manager",
+    "assetClasses": ["pump", "motor", "blower"],
+    "useCases": ["UC4"],
+    "source": "documents/knowledge-base/sop-energy.json",
+    "content": "These are the default assumptions used by the energy-optimizer agent. They are deliberately explicit so every number an agent produces can be traced and overridden per deployment. Override via the EDGEIQ_TARIFF_* and EDGEIQ_CARBON_* environment variables.\n\nTARIFF DEFAULTS. Peak rate 0.284 USD/kWh applied 07:00-11:00 and 17:00-21:00 weekdays. Off-peak rate 0.112 USD/kWh at all other times. Demand charge 14.50 USD per kW of monthly peak demand. Currency USD.\n\nCARBON INTENSITY. Grid average 0.371 kg CO2e per kWh. Marginal generation at peak 0.485 kg CO2e per kWh - which is why peak shifting reduces carbon as well as cost, by more than the energy saved alone would suggest.\n\nHYDRAULIC POWER. Hydraulic power in kW equals flow in m3/h multiplied by head in metres multiplied by 9.81, divided by 3600. Wire-to-water efficiency is hydraulic power divided by electrical power drawn. A well-matched new pumpset achieves 70-80%; below 55% warrants investigation.\n\nMAINTENANCE COST DEFAULTS. Labour 95 USD per hour. Unplanned downtime 1200 USD per hour on a critical asset. These drive the work order cost estimates."
+  },
+  {
+    "id": "REF-PRIORITY-001",
+    "title": "Reference: Work Order Priority Matrix and Escalation",
+    "docType": "policy",
+    "classification": "internal",
+    "effectiveDate": "2025-01-01",
+    "reviewDate": "2027-01-01",
+    "owner": "Maintenance Manager",
+    "assetClasses": ["pump", "motor", "blower", "valve", "analyser", "prv", "flowmeter", "gateway"],
+    "useCases": ["UC1", "UC2", "UC3", "UC4", "UC5"],
+    "source": "documents/knowledge-base/sop-energy.json",
+    "content": "PRIORITY IS DERIVED, NOT GUESSED. Priority is a function of asset criticality and consequence type. Agents must compute it with work-order.calculate_priority and must never invent one.\n\nCONSEQUENCE TYPES. SAFETY - risk to people. COMPLIANCE - risk of a regulatory breach or a water quality failure. AVAILABILITY - risk of loss of supply or of treatment capacity. EFFICIENCY - cost or energy penalty only. DATA - loss of monitoring capability.\n\nMATRIX. Critical asset: safety P1, compliance P1, availability P2, efficiency P3, data P3. High criticality asset: safety P1, compliance P2, availability P2, efficiency P3, data P4. Medium: safety P2, compliance P2, availability P3, efficiency P4, data P4. Low: safety P2, compliance P3, availability P4, efficiency P4, data P4.\n\nRESPONSE TARGETS. P1 respond immediately, mobilise within 2 hours, 24x7. P2 respond within 4 hours, plan within 7 days. P3 plan within 30 days. P4 next planned maintenance window.\n\nESCALATION MODIFIERS. A single point of failure with no standby raises priority by one level. A site serving a hospital, dialysis patients, a school or a care home on the priority services register raises priority by one level. An asset already carrying an open P1 or P2 raises any new related finding by one level. Priority never exceeds P1.\n\nHUMAN APPROVAL. Creating, assigning or closing a work order is a write action. It always requires explicit human approval in the interface AND the platform-level write flag to be enabled. An agent presents a fully-formed proposal with its evidence and cost estimate; a person commits it."
+  },
+  {
+    "id": "POL-AI-001",
+    "title": "Policy: Responsible Use of Edge IQ Agents in Operations",
+    "docType": "policy",
+    "classification": "internal",
+    "effectiveDate": "2025-08-01",
+    "reviewDate": "2026-08-01",
+    "owner": "Head of Digital Operations",
+    "assetClasses": [],
+    "useCases": ["UC1", "UC2", "UC3", "UC4", "UC5"],
+    "source": "documents/knowledge-base/sop-energy.json",
+    "content": "SCOPE. This policy governs how Edge IQ agents may be used in water and wastewater operations.\n\nDECISION BOUNDARY. Edge IQ is a decision SUPPORT system. It observes, correlates, explains and proposes. It does not decide and it does not act on the physical network. The following are explicitly reserved to authorised humans and may never be automated: issuing a boil water notice or any public health communication; operating a valve that affects customer supply; changing a SCADA control setpoint or control philosophy; committing a work order; dispatching a crew; notifying a regulator; and taking a critical asset out of service.\n\nEVIDENCE REQUIREMENT. Every material claim in an agent answer must be traceable to a retrieved document, a queried measurement or a named tool result. Agents cite their sources. An answer with no evidence is not an answer.\n\nDATA SUFFICIENCY. Agents must state data completeness for the window they analysed and must decline to draw a conclusion where completeness is below 90%, or where the instrument providing the data has failed a validity test. Silence in the data is reported as silence, never as normality.\n\nUNCERTAINTY. Agents state confidence and state what additional evidence would raise it. Agents do not present an inference as a measurement.\n\nSCOPE DISCIPLINE. An agent asked a question outside its domain hands off to the orchestrator rather than answering from general knowledge. Plausible-sounding domain guesses are the primary risk in this class of system.\n\nAUDIT. Every turn is logged with the question, the route taken, the agents and tools invoked, the context retrieved, the answer and the user identity. Traces are retained for 30 days by default and are queryable through the history API.\n\nGOVERNANCE OF KNOWLEDGE. Retrieval is filtered by document classification against the caller's clearance. Confidential material is never returned to an unclassified caller. Superseded documents are removed from the index, not merely marked - an agent citing a withdrawn procedure is a compliance failure."
+  }
+]

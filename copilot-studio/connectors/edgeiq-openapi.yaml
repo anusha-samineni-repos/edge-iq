@@ -1,0 +1,338 @@
+openapi: 3.0.3
+
+# =============================================================================
+# Edge IQ Orchestrator - OpenAPI definition
+# =============================================================================
+# Used as:
+#   1. The action manifest for the Copilot Studio / M365 declarative agent
+#   2. A Power Platform custom connector (import this file directly)
+#   3. The contract for any third-party client
+#
+# PLACEHOLDERS: replace <API_HOST>, <TENANT_ID>, <API_CLIENT_ID>, <TENANT>.
+# `infra/scripts/seed/generate-connector.ps1` substitutes these from the azd
+# environment after `azd up`.
+# =============================================================================
+
+info:
+  title: Edge IQ Solution Orchestrator
+  version: "1.0.0"
+  description: >-
+    Multi-agent intelligence for water utility IoT Edge operations. One endpoint
+    answers questions across asset health, water quality compliance, leak
+    detection, pump energy and edge fleet management. The orchestrator routes to
+    the right specialist, grounds the answer in the unified context layer
+    (Work IQ + Fabric IQ + Foundry IQ), and returns the answer with its
+    citations, its route and its data-sufficiency caveats.
+  contact:
+    name: Digital Operations
+    email: digital-ops@<TENANT>.com
+
+servers:
+  - url: https://<API_HOST>
+    description: Edge IQ API (Container Apps)
+
+security:
+  - entraId: []
+
+paths:
+
+  /api/chat:
+    post:
+      operationId: askEdgeIQ
+      summary: Ask Edge IQ a question about the edge estate
+      description: >-
+        Send a natural-language operational question. The orchestrator selects
+        the specialist agent, assembles grounded context and returns an
+        evidence-backed answer. Pass the same conversationId on follow-up turns
+        to keep context. Write actions such as creating a work order are never
+        committed here - they come back as proposals requiring human approval.
+      x-ms-visibility: important
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: The grounded answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+
+  /api/route-preview:
+    post:
+      operationId: previewRoute
+      summary: Show which specialist would answer, without calling a model
+      description: >-
+        Deterministic routing preview. Returns the chosen agents, their scores,
+        the confidence and the rationale. Useful for demos, for explaining the
+        system, and for testing routing changes with no model cost.
+      x-ms-visibility: advanced
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question:
+                  type: string
+                  description: The question to route.
+                  example: Why is vibration rising on WTP-01-PUMP-003?
+      responses:
+        '200':
+          description: The routing decision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDecision'
+
+  /api/agents:
+    get:
+      operationId: listAgents
+      summary: List the orchestrator and its specialist agents
+      description: >-
+        Returns every agent with its use case, the MCP tool servers it is
+        entitled to, the IQ layers it grounds against and sample questions.
+      x-ms-visibility: advanced
+      responses:
+        '200':
+          description: The agent inventory.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orchestrator: { $ref: '#/components/schemas/Agent' }
+                  specialists:
+                    type: array
+                    items: { $ref: '#/components/schemas/Agent' }
+
+  /api/history/conversations/{conversationId}:
+    get:
+      operationId: getConversation
+      summary: Retrieve a conversation's turns
+      x-ms-visibility: advanced
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: The stored turns.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversationId: { type: string }
+                  turns:
+                    type: array
+                    items: { $ref: '#/components/schemas/Turn' }
+
+  /api/history/traces/{conversationId}:
+    get:
+      operationId: getTraces
+      summary: Retrieve the audit trace for a conversation
+      description: >-
+        Every turn is traced with its route, the agents and tools invoked, the
+        context retrieved and the elapsed time. This is the audit evidence
+        required by the responsible-use policy.
+      x-ms-visibility: advanced
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: The trace records.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  traces:
+                    type: array
+                    items: { type: object, additionalProperties: true }
+
+  /api/health:
+    get:
+      operationId: getHealth
+      summary: Platform health across all subsystems
+      description: >-
+        Reports the status of each IQ layer, each MCP server, the agent
+        topology and conversation memory. Use this first when something looks
+        wrong - it distinguishes a degraded grounding layer from a model failure.
+      x-ms-visibility: advanced
+      security: []
+      responses:
+        '200':
+          description: Health report.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ready, degraded, error]
+                  iqLayers: { type: object, additionalProperties: true }
+                  mcpServers: { type: object, additionalProperties: true }
+                  memory: { type: object, additionalProperties: true }
+
+components:
+
+  securitySchemes:
+    entraId:
+      type: oauth2
+      description: >-
+        Microsoft Entra ID. The caller's identity flows through to Fabric and
+        Graph via on-behalf-of, so row-level security and M365 permissions are
+        enforced as that user.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/authorize
+          tokenUrl: https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token
+          scopes:
+            api://<API_CLIENT_ID>/EdgeIQ.Read: Ask questions and read results
+            api://<API_CLIENT_ID>/EdgeIQ.Propose: Receive work order proposals
+
+  schemas:
+
+    ChatRequest:
+      type: object
+      required: [question]
+      properties:
+        question:
+          type: string
+          description: >-
+            The operational question, in the user's own words. Pass it through
+            verbatim - device identifiers and exact phrasing drive routing.
+          example: Why is vibration rising on WTP-01-PUMP-003 and what should we do?
+        conversationId:
+          type: string
+          description: Carry this across turns to preserve context. Omit on the first turn and the service will mint one.
+        stream:
+          type: boolean
+          default: false
+          description: When true the response is Server-Sent Events. Copilot Studio should leave this false.
+        agent:
+          type: string
+          description: Force a specific specialist and bypass routing. Normally omitted.
+          enum: [asset-health, water-quality, leak-detection, energy-optimizer, fleet-operations, knowledge-navigator, maintenance-planner]
+        approved:
+          type: boolean
+          default: false
+          description: Human approval for a gated write action. Must be set by an authorised person in the Edge IQ console, never by an agent.
+
+    ChatResponse:
+      type: object
+      properties:
+        conversationId: { type: string }
+        answer:
+          type: string
+          description: The grounded answer in Markdown, with inline citation markers such as [1].
+        route: { $ref: '#/components/schemas/RouteDecision' }
+        citations:
+          type: array
+          items: { $ref: '#/components/schemas/Citation' }
+        approvalRequired:
+          type: boolean
+          description: True when the answer contains a proposed write action awaiting human approval.
+        pendingActions:
+          type: array
+          description: Fully-formed proposals the user may approve in the console.
+          items:
+            type: object
+            properties:
+              action: { type: string, example: create_work_order }
+              agent: { type: string }
+              summary: { type: string }
+              payload: { type: object, additionalProperties: true }
+        dataSufficiency:
+          type: object
+          description: The completeness of the data the answer was drawn from. Never suppress this.
+          properties:
+            completenessPct: { type: number }
+            verdict: { type: string, enum: [sufficient, degraded, no_data] }
+            caveats: { type: array, items: { type: string } }
+        elapsedMs: { type: integer }
+
+    RouteDecision:
+      type: object
+      properties:
+        agents:
+          type: array
+          items: { type: string }
+          description: The specialists selected, best first.
+        strategy:
+          type: string
+          enum: [direct, parallel, plan]
+          description: >-
+            direct - one clear specialist. parallel - two comparable candidates
+            run together. plan - ambiguous, the Magentic manager plans a
+            multi-agent approach.
+        confidence: { type: number, format: float }
+        rationale: { type: string }
+        scores: { type: object, additionalProperties: { type: number } }
+
+    Citation:
+      type: object
+      properties:
+        id: { type: string, example: "1" }
+        title: { type: string }
+        source: { type: string }
+        docType: { type: string, enum: [sop, runbook, reference, regulation, policy] }
+        classification: { type: string, enum: [public, internal, confidential] }
+        effectiveDate: { type: string }
+
+    Agent:
+      type: object
+      properties:
+        name: { type: string }
+        displayName: { type: string }
+        useCase: { type: string }
+        summary: { type: string }
+        mcpServers: { type: array, items: { type: string } }
+        iqLayers: { type: array, items: { type: string } }
+        sampleQuestions: { type: array, items: { type: string } }
+        requiresApprovalFor: { type: array, items: { type: string } }
+
+    Turn:
+      type: object
+      properties:
+        role: { type: string, enum: [user, assistant] }
+        content: { type: string }
+        timestamp: { type: string, format: date-time }
+        metadata: { type: object, additionalProperties: true }
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        detail: { type: string }
+
+  responses:
+    BadRequest:
+      description: The request was malformed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing or invalid Entra ID token.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unavailable:
+      description: The orchestrator or a required grounding layer is unavailable. Check /api/health.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }

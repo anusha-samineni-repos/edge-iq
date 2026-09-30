@@ -1,0 +1,131 @@
+kind: AdaptiveDialog
+
+# =============================================================================
+# Work Order Approval
+# =============================================================================
+# The human-in-the-loop gate. Edge IQ can *propose* maintenance work with full
+# evidence, but a named person must approve before anything is written to the
+# maintenance system.
+#
+# Two independent keys are required for a write to commit:
+#   1. approved=true on the request (this topic, set by a human)
+#   2. EDGEIQ_ALLOW_WRITES=true in the API environment (set by an admin)
+# Neither an agent nor this topic can satisfy both alone.
+# =============================================================================
+
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    displayName: Approve proposed work
+    triggerQueries:
+      - Approve the work order
+      - Raise that work order
+      - Go ahead and create it
+      - Create the maintenance job
+      - Approve WO
+
+  actions:
+
+    # -------------------------------------------------------------------------
+    # 1. There must be a live proposal. Never accept an approval for work that
+    #    was not proposed with evidence in this conversation.
+    # -------------------------------------------------------------------------
+    - kind: ConditionGroup
+      id: guardNoProposal
+      conditions:
+        - id: nothingPending
+          condition: =IsBlank(Global.EdgeIqPendingAction)
+          actions:
+            - kind: SendActivity
+              id: noProposal
+              activity: |
+                There is no proposed work order in this conversation to approve.
+
+                Ask about an asset first - for example *"Why is vibration rising
+                on WTP-01-PUMP-003?"* - and if the evidence supports it, Edge IQ
+                will propose a work order that you can then approve.
+            - kind: EndDialog
+              id: endNoProposal
+
+    # -------------------------------------------------------------------------
+    # 2. Restate what is about to happen, in full, before asking for consent.
+    # -------------------------------------------------------------------------
+    - kind: SendActivity
+      id: restate
+      activity: |
+        **You are about to commit this to the maintenance system.**
+
+        | Field | Value |
+        |---|---|
+        | Asset | {Global.EdgeIqPendingAction.payload.assetId} |
+        | Site | {Global.EdgeIqPendingAction.payload.siteId} |
+        | Type | {Global.EdgeIqPendingAction.payload.workType} |
+        | Priority | {Global.EdgeIqPendingAction.payload.priority} |
+        | Trade | {Global.EdgeIqPendingAction.payload.craft} |
+        | Est. hours | {Global.EdgeIqPendingAction.payload.estimatedHours} |
+        | Est. cost | {Global.EdgeIqPendingAction.payload.estimatedCost} |
+        | Target date | {Global.EdgeIqPendingAction.payload.targetDate} |
+
+        **Scope**
+        {Global.EdgeIqPendingAction.payload.description}
+
+        **Evidence relied on**
+        {Concat(Global.EdgeIqPendingAction.payload.evidence, "- " & Value & Char(10))}
+
+    - kind: Question
+      id: confirm
+      alwaysPrompt: true
+      variable: Topic.Confirmed
+      prompt: Approve and raise this work order?
+      entity: ConfirmationPrebuiltEntity
+
+    - kind: ConditionGroup
+      id: declined
+      conditions:
+        - id: notConfirmed
+          condition: =Topic.Confirmed <> true
+          actions:
+            - kind: SendActivity
+              id: cancelled
+              activity: >-
+                Not approved. Nothing was written. The proposal stays in this
+                conversation if you want to revisit it.
+            - kind: EndDialog
+              id: endDeclined
+
+    # -------------------------------------------------------------------------
+    # 3. Commit - with the approver's identity recorded in the audit trail.
+    # -------------------------------------------------------------------------
+    - kind: InvokeConnectorAction
+      id: commitWorkOrder
+      connectionReference: edgeiq_orchestrator
+      operationId: askEdgeIQ
+      connectionProperties: { mode: UserAuthentication }
+      inputs:
+        binding:
+          body:
+            question: >-
+              =Concatenate("Approved by ", System.User.DisplayName, " (",
+              System.User.PrincipalName, "). Commit the pending work order
+              proposal exactly as presented, with no changes.")
+            conversationId: =Global.EdgeIqConversationId
+            agent: maintenance-planner
+            approved: true
+      output:
+        binding:
+          answer: Topic.CommitResult
+
+    - kind: SendActivity
+      id: committed
+      activity: |
+        {Topic.CommitResult}
+
+        Approved by {System.User.DisplayName} at {Text(Now(), "dd mmm yyyy hh:mm")}.
+        This approval is recorded in the Edge IQ audit trace against conversation
+        `{Global.EdgeIqConversationId}`.
+
+    - kind: SetVariable
+      id: clearPending
+      variable: Global.EdgeIqPendingAction
+      value: =Blank()

@@ -1,0 +1,53 @@
+{
+  "$schema": "./scenario.schema.json",
+  "id": "UC4",
+  "title": "Pump energy and carbon optimisation",
+  "summary": "A pump drifts off its best efficiency point while running through peak tariff hours. Edge IQ separates the hydraulic problem from the scheduling problem, because they have different fixes and different payback.",
+  "primaryAgent": "energy-optimizer",
+  "supportingAgents": ["asset-health", "maintenance-planner"],
+  "mcpServers": ["historian", "asset_registry", "work_order"],
+  "iqLayers": {
+    "fabricIq": "Power, flow and head series joined to tariff periods and pump curves.",
+    "foundryIq": "Pump efficiency guidance and the energy management SOP.",
+    "workIq": "Budget context and the sustainability reporting cycle."
+  },
+  "seededFault": {
+    "device": "PS-04-PUMP-001",
+    "site": "PS-04",
+    "signal": "efficiency_pct / power_kw",
+    "behaviour": "14% efficiency loss against the reference curve, with a significant share of run hours in peak tariff.",
+    "why": "Two separable problems wearing one costume. Efficiency loss is mechanical - wear ring clearance, impeller condition - and needs an intervention. Tariff exposure is a scheduling choice and can often be fixed this week for nothing.",
+    "tunableIn": "data/generators/generate_telemetry.py -> SCENARIO['uc4_efficiency_loss_pct']"
+  },
+  "script": [
+    {
+      "step": 1,
+      "ask": "Which pumps lost efficiency this month, and what is the cost exposure at peak tariff?",
+      "expect": "Routes to energy-optimizer. Identifies PS-04-PUMP-001, quantifies the loss and the tariff-weighted cost.",
+      "watchFor": "Cost, not just percentage. An efficiency number does not fund a repair; a currency figure does."
+    },
+    {
+      "step": 2,
+      "ask": "Is that a mechanical problem or are we just pumping at the wrong time of day?",
+      "expect": "Separates the two contributions and attributes cost to each.",
+      "watchFor": "This is the question that earns its keep. Rescheduling is free; an impeller is not. Conflating them either wastes money or defers a real repair."
+    },
+    {
+      "step": 3,
+      "ask": "If we shift pumping to off-peak, what happens to reservoir levels and can we still meet demand?",
+      "expect": "Brings in storage constraints rather than optimising energy in isolation.",
+      "watchFor": "The constraint check matters. An energy-optimal schedule that empties a reservoir is not a solution."
+    },
+    {
+      "step": 4,
+      "ask": "What is the carbon impact, and what would the payback be on fixing the efficiency loss?",
+      "expect": "Converts energy to emissions and gives a payback period for the intervention.",
+      "watchFor": "Emissions and payback together - this is the form the answer needs to take to survive a capital approval meeting."
+    }
+  ],
+  "talkingPoints": [
+    "Pumping is typically the largest electricity cost a water utility carries. Small efficiency percentages are large absolute numbers.",
+    "The agent decomposes the cost rather than reporting a single blended figure, because the two causes have different remedies.",
+    "Carbon and cost come from the same telemetry - no separate sustainability data pipeline is needed."
+  ]
+}

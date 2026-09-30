@@ -1,0 +1,529 @@
+# =============================================================================
+# Edge IQ - Fabric IQ Business Ontology
+# =============================================================================
+# This is the semantic layer of Fabric IQ. It maps the *language operators use*
+# onto the physical Delta tables in the OneLake gold layer, so agents can reason
+# about "the raw water pump at the treatment works" rather than
+# "gold_asset WHERE assetClass='pump' AND siteId LIKE 'WTP%'".
+#
+# Consumed by:
+#   - src/api/python/iq/fabric_iq.py  -> describe_ontology(), resolve_entity()
+#   - Fabric Data Agent               -> NL2SQL grounding (upload as ontology)
+#   - fabric/notebooks/*              -> gold table contract
+#
+# HOW TO EXTEND: add an entity, point `table` at a gold Delta table, list the
+# attributes agents may reference, and give every business synonym an operator
+# might say. Synonyms are the highest-leverage field here - they are what turn
+# vague questions into correct queries.
+# =============================================================================
+
+name: water-utility-edge
+version: "1.2.0"
+description: >-
+  Semantic ontology for water and wastewater utility IoT Edge operations,
+  covering treatment, distribution, pumping, water quality and the edge
+  device estate itself. Aligned to the OneLake gold layer of EdgeIQ_Lakehouse.
+
+lakehouse: EdgeIQ_Lakehouse
+workspace: EdgeIQ-WaterUtility
+defaultTimeColumn: timestamp
+timezone: UTC
+
+# -----------------------------------------------------------------------------
+# ENTITIES
+# -----------------------------------------------------------------------------
+entities:
+
+  - name: Site
+    table: gold_site
+    grain: One row per physical facility.
+    description: >-
+      A physical facility in the network - treatment works, wastewater plant,
+      pumping station, service reservoir, borehole or district metered area.
+    synonyms: [site, facility, plant, works, location, station, installation]
+    primaryKey: siteId
+    attributes:
+      - name: siteId
+        type: string
+        description: Stable business key, e.g. WTP-01, DMA-14, PS-04.
+        synonyms: [site id, site code, facility id]
+      - name: siteName
+        type: string
+        synonyms: [site name, facility name]
+      - name: siteType
+        type: string
+        description: treatment | wastewater | pumping | reservoir | dma | wellfield
+        synonyms: [type, category, kind]
+        allowedValues: [treatment, wastewater, pumping, reservoir, dma, wellfield]
+      - name: region
+        type: string
+        synonyms: [area, zone, district, operating region]
+      - name: populationServed
+        type: int
+        description: People supplied - drives regulatory tier and consequence scoring.
+        synonyms: [population, customers served, people served]
+      - name: capacityMld
+        type: double
+        description: Design capacity in megalitres per day.
+        synonyms: [capacity, design flow, throughput]
+      - name: criticality
+        type: string
+        allowedValues: [critical, high, medium, low]
+        synonyms: [importance, criticality tier, business criticality]
+
+  - name: Asset
+    table: gold_asset
+    grain: One row per maintainable physical asset.
+    description: >-
+      A maintainable engineering asset - pump, blower, motor, valve, analyser,
+      PRV or flow meter - installed at a Site and monitored by an EdgeDevice.
+    synonyms: [asset, equipment, machine, plant item, kit, unit]
+    primaryKey: assetId
+    attributes:
+      - name: assetId
+        type: string
+        synonyms: [asset id, tag, equipment number, asset tag]
+      - name: siteId
+        type: string
+        foreignKey: Site.siteId
+      - name: assetClass
+        type: string
+        description: pump | blower | motor | valve | analyser | prv | flowmeter
+        synonyms: [class, asset type, equipment type]
+        allowedValues: [pump, blower, motor, valve, analyser, prv, flowmeter]
+      - name: manufacturer
+        type: string
+        synonyms: [make, vendor, oem]
+      - name: model
+        type: string
+        synonyms: [model number, part model]
+      - name: ratedPowerKw
+        type: double
+        description: >-
+          Nameplate power. Selects the ISO 10816-3 vibration band -
+          <=15 kW small, 15-75 kW medium, >75 kW large.
+        synonyms: [rated power, kw, nameplate power, motor size]
+      - name: installDate
+        type: date
+        synonyms: [installed, commissioned, commissioning date]
+      - name: criticality
+        type: string
+        allowedValues: [critical, high, medium, low]
+        synonyms: [asset criticality, importance]
+      - name: dutyStandby
+        type: string
+        allowedValues: [duty, standby, assist]
+        synonyms: [duty, standby, role, run configuration]
+
+  - name: EdgeDevice
+    table: gold_edge_device
+    grain: One row per registered IoT Edge device.
+    description: >-
+      An Azure IoT Edge gateway or leaf device. Carries the modules that do
+      on-device inference and store-and-forward buffering.
+    synonyms: [device, gateway, edge device, edge node, iot device, plc gateway, rtu]
+    primaryKey: deviceId
+    attributes:
+      - name: deviceId
+        type: string
+        synonyms: [device id, device name, gateway id]
+      - name: siteId
+        type: string
+        foreignKey: Site.siteId
+      - name: assetId
+        type: string
+        foreignKey: Asset.assetId
+      - name: deviceType
+        type: string
+        allowedValues: [gateway, sensor, analyser, meter]
+        synonyms: [type, device class]
+      - name: status
+        type: string
+        allowedValues: [connected, disconnected, degraded]
+        synonyms: [connection status, online, offline, connectivity]
+      - name: runtimeVersion
+        type: string
+        synonyms: [iot edge version, runtime, agent version]
+      - name: lastHeartbeatUtc
+        type: timestamp
+        synonyms: [last seen, last contact, last heartbeat, last reported]
+      - name: certExpiryUtc
+        type: timestamp
+        description: >-
+          Device identity certificate expiry. Inside 30 days is an operational
+          risk; expiry silently drops the device off the network.
+        synonyms: [certificate expiry, cert expiry, identity expiry]
+      - name: deploymentId
+        type: string
+        synonyms: [manifest, deployment, module deployment]
+
+  - name: Telemetry
+    table: gold_telemetry_hourly
+    grain: One row per device per tag per hour.
+    description: >-
+      Hourly-aggregated edge telemetry. The gold layer stores mean/min/max/
+      stddev per tag so agents can trend without scanning raw events.
+    synonyms: [telemetry, readings, measurements, sensor data, signals, historian, tags]
+    attributes:
+      - name: timestamp
+        type: timestamp
+        synonyms: [time, when, datetime, hour]
+      - name: deviceId
+        type: string
+        foreignKey: EdgeDevice.deviceId
+      - name: assetId
+        type: string
+        foreignKey: Asset.assetId
+      - name: vibration_mm_s
+        type: double
+        unit: mm/s RMS
+        description: Velocity RMS 10-1000 Hz, compared against ISO 10816-3 zones.
+        synonyms: [vibration, vibes, velocity, shake, rms]
+      - name: bearing_temp_c
+        type: double
+        unit: "°C"
+        synonyms: [bearing temperature, temp, bearing temp, heat]
+      - name: motor_current_a
+        type: double
+        unit: A
+        synonyms: [current, amps, motor current, load current]
+      - name: power_kw
+        type: double
+        unit: kW
+        synonyms: [power, load, kw, demand, consumption]
+      - name: flow_m3_h
+        type: double
+        unit: m3/h
+        synonyms: [flow, flowrate, throughput, discharge]
+      - name: pressure_bar
+        type: double
+        unit: bar
+        synonyms: [pressure, head, psi]
+      - name: suction_pressure_bar
+        type: double
+        unit: bar
+        synonyms: [suction pressure, inlet pressure, npsh]
+      - name: runHours
+        type: double
+        synonyms: [run hours, running hours, operating hours, hours run]
+
+  - name: WaterQuality
+    table: gold_water_quality
+    grain: One row per analyser per hour.
+    description: >-
+      Regulated water quality parameters from online analysers in treatment
+      and distribution. Compared against RegulatoryLimit.
+    synonyms: [water quality, quality, wq, compliance readings, analyser readings, chemistry]
+    attributes:
+      - name: timestamp
+        type: timestamp
+      - name: deviceId
+        type: string
+        foreignKey: EdgeDevice.deviceId
+      - name: siteId
+        type: string
+        foreignKey: Site.siteId
+      - name: chlorine_mg_l
+        type: double
+        unit: mg/L
+        description: Free chlorine residual. Disinfection barrier indicator.
+        synonyms: [chlorine, free chlorine, residual, cl2, disinfectant]
+      - name: turbidity_ntu
+        type: double
+        unit: NTU
+        description: Filtration performance and pathogen surrogate.
+        synonyms: [turbidity, cloudiness, ntu, clarity]
+      - name: ph
+        type: double
+        synonyms: [ph, acidity, alkalinity]
+      - name: conductivity_us_cm
+        type: double
+        unit: µS/cm
+        synonyms: [conductivity, ec, tds]
+      - name: temperature_c
+        type: double
+        unit: "°C"
+        synonyms: [water temperature, temp]
+
+  - name: DmaFlow
+    table: gold_dma_flow
+    grain: One row per DMA per hour.
+    description: >-
+      District metered area inlet flow. Minimum night flow between 02:00-04:00
+      is the primary leakage indicator.
+    synonyms: [dma flow, district flow, night flow, mnf, zone flow, inlet flow]
+    attributes:
+      - name: timestamp
+        type: timestamp
+      - name: dmaId
+        type: string
+        foreignKey: Site.siteId
+        synonyms: [dma, district, zone]
+      - name: inflow_m3_h
+        type: double
+        unit: m3/h
+        synonyms: [inflow, inlet flow, supply flow]
+      - name: isNightWindow
+        type: boolean
+        description: True for hours 02:00-04:00 local, the MNF assessment window.
+        synonyms: [night, night window, mnf window]
+
+  - name: Alarm
+    table: gold_alarm
+    grain: One row per alarm instance.
+    synonyms: [alarm, alert, event, trip, exception, fault]
+    primaryKey: alarmId
+    attributes:
+      - name: alarmId
+        type: string
+      - name: deviceId
+        type: string
+        foreignKey: EdgeDevice.deviceId
+      - name: severity
+        type: string
+        allowedValues: [critical, high, medium, low]
+        synonyms: [severity, priority, urgency]
+      - name: state
+        type: string
+        allowedValues: [active, acknowledged, cleared]
+        synonyms: [status, state, acknowledged, cleared]
+      - name: raisedUtc
+        type: timestamp
+        synonyms: [raised, triggered, started, when it fired]
+      - name: message
+        type: string
+        synonyms: [description, text, reason]
+
+  - name: WorkOrder
+    table: gold_work_order
+    grain: One row per work order.
+    description: >-
+      Maintenance work order. Written back to the CMMS (Maximo / Dynamics 365
+      Field Service) via the work-order MCP server, always behind approval.
+    synonyms: [work order, wo, job, ticket, maintenance job, task, job card]
+    primaryKey: workOrderId
+    attributes:
+      - name: workOrderId
+        type: string
+        synonyms: [wo number, work order id, job number]
+      - name: assetId
+        type: string
+        foreignKey: Asset.assetId
+      - name: siteId
+        type: string
+        foreignKey: Site.siteId
+      - name: priority
+        type: string
+        allowedValues: [P1, P2, P3, P4]
+        synonyms: [priority, urgency, p code]
+      - name: status
+        type: string
+        allowedValues: [open, assigned, in_progress, complete, cancelled]
+        synonyms: [status, state, progress]
+      - name: failureMode
+        type: string
+        foreignKey: FailureMode.failureMode
+        synonyms: [failure mode, fault, problem, cause]
+      - name: estimatedHours
+        type: double
+        synonyms: [estimate, duration, labour hours]
+      - name: createdUtc
+        type: timestamp
+        synonyms: [raised, created, opened]
+
+  - name: FailureMode
+    table: gold_failure_mode
+    grain: One row per asset class + failure mode (FMEA library).
+    description: >-
+      Reliability reference data. Links a detectable telemetry signature to a
+      failure mode, its severity, and the recommended intervention.
+    synonyms: [failure mode, fmea, fault mode, failure library, degradation mode]
+    attributes:
+      - name: assetClass
+        type: string
+        foreignKey: Asset.assetClass
+      - name: failureMode
+        type: string
+        synonyms: [mode, fault type]
+      - name: detectableSignature
+        type: string
+        description: The telemetry pattern that indicates this mode.
+        synonyms: [signature, symptom, indicator, evidence]
+      - name: severity
+        type: string
+        allowedValues: [critical, high, medium, low]
+      - name: typicalLeadTimeDays
+        type: int
+        description: Warning time from first detection to functional failure.
+        synonyms: [lead time, warning time, p-f interval]
+      - name: recommendedAction
+        type: string
+        synonyms: [action, remedy, fix, intervention]
+
+  - name: RegulatoryLimit
+    table: gold_regulatory_limit
+    grain: One row per regime + parameter.
+    description: >-
+      Statutory water quality limits (US EPA NPDWR, UK DWI, WHO GDWQ) with
+      citations. Never infer a limit - always read it from here.
+    synonyms: [limit, regulation, standard, compliance limit, threshold, statutory limit]
+    attributes:
+      - name: regime
+        type: string
+        allowedValues: [US-EPA, UK-DWI, WHO]
+        synonyms: [regime, regulator, jurisdiction, standard body]
+      - name: parameter
+        type: string
+        synonyms: [parameter, determinand, analyte]
+      - name: limitValue
+        type: double
+        synonyms: [limit, mcl, pcv, guideline value, max]
+      - name: actionLevel
+        type: double
+        description: Internal trigger set below the statutory limit.
+        synonyms: [action level, trigger, internal limit, alert level]
+      - name: citation
+        type: string
+        synonyms: [citation, reference, regulation number]
+
+# -----------------------------------------------------------------------------
+# RELATIONSHIPS
+# -----------------------------------------------------------------------------
+relationships:
+  - from: Asset
+    to: Site
+    type: many-to-one
+    on: [assetId -> siteId]
+    description: Every asset is installed at exactly one site.
+  - from: EdgeDevice
+    to: Site
+    type: many-to-one
+    on: [deviceId -> siteId]
+  - from: EdgeDevice
+    to: Asset
+    type: one-to-one
+    on: [assetId -> assetId]
+    description: A monitoring device is bound to the asset it instruments.
+  - from: Telemetry
+    to: EdgeDevice
+    type: many-to-one
+    on: [deviceId -> deviceId]
+  - from: WaterQuality
+    to: EdgeDevice
+    type: many-to-one
+    on: [deviceId -> deviceId]
+  - from: Alarm
+    to: EdgeDevice
+    type: many-to-one
+    on: [deviceId -> deviceId]
+  - from: WorkOrder
+    to: Asset
+    type: many-to-one
+    on: [assetId -> assetId]
+  - from: WorkOrder
+    to: FailureMode
+    type: many-to-one
+    on: [failureMode -> failureMode]
+  - from: FailureMode
+    to: Asset
+    type: many-to-one
+    on: [assetClass -> assetClass]
+
+# -----------------------------------------------------------------------------
+# MEASURES  (business calculations agents may reference by name)
+# -----------------------------------------------------------------------------
+measures:
+
+  - name: MinimumNightFlow
+    entity: DmaFlow
+    unit: m3/h
+    expression: AVG(inflow_m3_h) WHERE isNightWindow = true
+    description: >-
+      Mean inlet flow 02:00-04:00. Legitimate night use is small, so a rising
+      MNF is the classic leakage signal. Compare the trailing 7-day MNF with
+      the established baseline; sustained excess above ~2 m3/h warrants a survey.
+    synonyms: [mnf, minimum night flow, night flow, night line]
+    useCase: UC3
+
+  - name: NonRevenueWater
+    entity: DmaFlow
+    unit: percent
+    expression: (inflow_m3_h - billedConsumption) / inflow_m3_h * 100
+    description: >-
+      Share of water put into supply that is not billed - real losses plus
+      apparent losses plus unbilled authorised consumption.
+    synonyms: [nrw, non revenue water, water loss, leakage percent, unaccounted for water]
+    useCase: UC3
+
+  - name: SpecificEnergyConsumption
+    entity: Telemetry
+    unit: kWh/m3
+    expression: SUM(power_kw) / SUM(flow_m3_h)
+    description: >-
+      Energy per unit of water pumped. The single best pump-efficiency KPI
+      because it normalises out duty variation. A rising SEC at constant duty
+      means wear, fouling, or a drifting operating point.
+    synonyms: [sec, specific energy, kwh per m3, energy intensity, pumping efficiency]
+    useCase: UC4
+
+  - name: VibrationSeverity
+    entity: Telemetry
+    unit: mm/s RMS
+    expression: AVG(vibration_mm_s) compared to ISO 10816-3 zone for ratedPowerKw
+    description: >-
+      Zone A new machine, B acceptable for long-term running, C unsatisfactory
+      for continuous operation, D damage likely. The band boundaries depend on
+      rated power - always resolve them via asset-registry.get_vibration_limits.
+    synonyms: [vibration severity, iso zone, vibration level, condition zone]
+    useCase: UC1
+
+  - name: ChlorineResidualCompliance
+    entity: WaterQuality
+    unit: percent
+    expression: COUNT(chlorine_mg_l >= actionLevel) / COUNT(*) * 100
+    description: >-
+      Percentage of hours the free chlorine residual held above the internal
+      action level. Always validate the analyser first - a flatlined sensor
+      reads perfectly compliant and is the most common false negative.
+    synonyms: [chlorine compliance, residual compliance, disinfection compliance]
+    useCase: UC2
+
+  - name: FleetAvailability
+    entity: EdgeDevice
+    unit: percent
+    expression: COUNT(status = 'connected') / COUNT(*) * 100
+    description: Share of the edge estate currently connected and reporting.
+    synonyms: [fleet availability, uptime, device uptime, connectivity rate]
+    useCase: UC5
+
+  - name: DataCompleteness
+    entity: Telemetry
+    unit: percent
+    expression: COUNT(received samples) / COUNT(expected samples) * 100
+    description: >-
+      Guard metric. Any analytical conclusion drawn from a window with
+      completeness below 90% must be reported with that caveat.
+    synonyms: [completeness, data quality, coverage, sample completeness]
+    useCase: UC5
+
+  - name: MeanTimeBetweenFailures
+    entity: WorkOrder
+    unit: hours
+    expression: SUM(runHours) / COUNT(corrective work orders)
+    description: Reliability baseline used to judge whether an intervention worked.
+    synonyms: [mtbf, reliability, time between failures]
+    useCase: UC1
+
+# -----------------------------------------------------------------------------
+# GOVERNANCE
+# -----------------------------------------------------------------------------
+governance:
+  classificationColumn: classification
+  defaultClassification: internal
+  piiEntities: []
+  writeBackEntities: [WorkOrder]
+  notes: >-
+    Only WorkOrder is writable, and only through the work-order MCP server with
+    approved=true AND EDGEIQ_ALLOW_WRITES=true. Every other entity is read-only
+    to agents. Row-level security in Fabric is enforced by the caller's identity
+    when on-behalf-of is enabled.

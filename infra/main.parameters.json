@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "solutionName":                    { "value": "${AZURE_SOLUTION_NAME=edgeiq}" },
+    "environmentName":                 { "value": "${AZURE_ENV_TYPE=dev}" },
+    "location":                        { "value": "${AZURE_LOCATION}" },
+
+    "chatModelName":                   { "value": "${AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4o}" },
+    "chatModelVersion":                { "value": "${AZURE_OPENAI_CHAT_VERSION=2024-11-20}" },
+    "chatModelCapacity":               { "value": "${AZURE_OPENAI_CHAT_CAPACITY=50}" },
+    "embeddingModelName":              { "value": "${AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-3-large}" },
+    "embeddingModelVersion":           { "value": "${AZURE_OPENAI_EMBEDDING_VERSION=1}" },
+    "embeddingModelCapacity":          { "value": "${AZURE_OPENAI_EMBEDDING_CAPACITY=50}" },
+    "existingFoundryProjectResourceId":{ "value": "${AZURE_EXISTING_AI_PROJECT_RESOURCE_ID=}" },
+
+    "deployFabricCapacity":            { "value": "${DEPLOY_FABRIC_CAPACITY=true}" },
+    "fabricCapacitySku":               { "value": "${FABRIC_CAPACITY_SKU=F2}" },
+    "fabricAdminMembers":              { "value": "${FABRIC_ADMIN_MEMBERS=[]}" },
+    "fabricWorkspaceName":             { "value": "${FABRIC_WORKSPACE_NAME=EdgeIQ-WaterUtility}" },
+    "fabricLakehouseName":             { "value": "${FABRIC_LAKEHOUSE_NAME=EdgeIQ_Lakehouse}" },
+    "fabricEventhouseName":            { "value": "${FABRIC_EVENTHOUSE_NAME=EdgeIQ_Telemetry}" },
+
+    "m365TenantId":                    { "value": "${M365_TENANT_ID=}" },
+    "m365ClientId":                    { "value": "${M365_CLIENT_ID=}" },
+    "m365SharePointSiteUrls":          { "value": "${M365_SHAREPOINT_SITE_URLS=[]}" },
+    "m365TeamsChannelIds":             { "value": "${M365_TEAMS_CHANNEL_IDS=[]}" },
+    "copilotStudioEnvironmentId":      { "value": "${COPILOT_STUDIO_ENVIRONMENT_ID=}" },
+    "copilotStudioAgentSchemaName":    { "value": "${COPILOT_STUDIO_AGENT_SCHEMA_NAME=edgeiq_water_edge_agent}" },
+
+    "iotHubSku":                       { "value": "${IOTHUB_SKU=S1}" },
+    "iotHubCapacity":                  { "value": "${IOTHUB_CAPACITY=1}" },
+    "eventHubCapacity":                { "value": "${EVENTHUB_CAPACITY=1}" },
+
+    "cosmosServerless":                { "value": "${COSMOS_SERVERLESS=true}" },
+    "cosmosThroughput":                { "value": "${COSMOS_THROUGHPUT=1000}" },
+    "searchSku":                       { "value": "${SEARCH_SKU=basic}" },
+
+    "imageTag":                        { "value": "${IMAGE_TAG=latest}" },
+    "minReplicas":                     { "value": "${MIN_REPLICAS=0}" },
+    "maxReplicas":                     { "value": "${MAX_REPLICAS=3}" },
+    "deployerPrincipalId":             { "value": "${AZURE_PRINCIPAL_ID=}" }
+  }
+}

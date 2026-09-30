@@ -1,0 +1,54 @@
+[
+  {
+    "id": "SOP-EDGE-001",
+    "title": "SOP: IoT Edge Device Offline Triage",
+    "docType": "runbook",
+    "classification": "internal",
+    "effectiveDate": "2025-03-15",
+    "reviewDate": "2027-03-15",
+    "owner": "OT Platform Manager",
+    "assetClasses": ["gateway"],
+    "useCases": ["UC5"],
+    "source": "documents/knowledge-base/runbook-edge-fleet.json",
+    "content": "SCOPE. An IoT Edge device has stopped reporting, or is reporting intermittently.\n\nFIRST PRINCIPLE. Absence of data is never evidence of a healthy process. If a device is offline, every downstream analytic for that asset is blind, and any dashboard showing a last-known-good value is actively misleading. Treat a silent device as an incident, not as a quiet site.\n\nSTEP 1 - CHARACTERISE. Determine whether the device is fully offline or flapping. Fully offline means no heartbeat for more than three reporting intervals. Flapping means repeated connect and disconnect events - more than five disconnects in 24 hours is the threshold. Flapping is more damaging than a clean outage because it produces partial, gap-ridden data that looks valid.\n\nSTEP 2 - RULE OUT IDENTITY. Check the device certificate expiry FIRST. An expired device identity certificate produces a clean, total, permanent disconnection that looks exactly like a hardware failure and wastes a site visit. Certificates inside 30 days of expiry must be renewed proactively. This is the single most common avoidable cause of edge fleet outages.\n\nSTEP 3 - RULE OUT NETWORK. Check whether other devices at the same site are also affected. A site-wide outage points at the site link, the router or power, not at the device. Check the cellular signal quality or the site WAN status before dispatching to the device itself.\n\nSTEP 4 - RULE OUT DEPLOYMENT. Check whether a module deployment was applied immediately before the outage. A failed or misconfigured deployment can crash the edge runtime. Check module status and restart counts. Roll back to the last known good manifest if a recent deployment correlates with the failure.\n\nSTEP 5 - RULE OUT RESOURCE EXHAUSTION. Check the store-and-forward buffer, disk usage and memory. A device that has buffered for days may exhaust storage and begin discarding messages. Data already discarded cannot be recovered - flag the gap explicitly.\n\nSTEP 6 - DISPATCH. Only after steps 2 to 5 are exhausted should an engineer be dispatched. Bundle the diagnosis, the evidence and the likely required parts into the work order so the visit is a first-time fix.\n\nDATA BACKFILL. When a device reconnects, edge store-and-forward will replay buffered telemetry. Do not treat the replayed burst as a real-time anomaly. Expect out-of-order arrival and reconcile on event time, never ingestion time."
+  },
+  {
+    "id": "SOP-EDGE-002",
+    "title": "SOP: Module Twin and Configuration Drift Management",
+    "docType": "runbook",
+    "classification": "internal",
+    "effectiveDate": "2025-04-10",
+    "reviewDate": "2027-04-10",
+    "owner": "OT Platform Manager",
+    "assetClasses": ["gateway"],
+    "useCases": ["UC5"],
+    "source": "documents/knowledge-base/runbook-edge-fleet.json",
+    "content": "DEFINITION. Configuration drift is any difference between a device's reported module twin properties and the desired properties in its assigned deployment manifest. Drift means the device is not running the configuration the organisation believes it is running.\n\nWHY IT MATTERS MORE THAN IT LOOKS. Drift is usually introduced by a well-intentioned local change during a site visit - someone widens an alarm threshold to stop a nuisance alarm, or lengthens a sampling interval to reduce data charges. The result is a device that quietly under-reports. A vibration alarm threshold raised from 4.5 to 9.0 mm/s means the asset can enter ISO zone D without ever raising an alarm. A sampling interval stretched from 60 to 300 seconds means transient events are simply never captured.\n\nHIGH-RISK DRIFT PARAMETERS. Alarm thresholds of any kind. Sampling and publish intervals. Store-and-forward buffer size and TTL. Upstream endpoint configuration. Model version for on-device inference. Any change to these must go through deployment management, never a local edit.\n\nDETECTION. The platform compares reported versus desired properties on every twin update and raises a drift finding with the parameter name, desired value, reported value and the time the divergence appeared.\n\nRESPONSE. Classify each drifted parameter as sanctioned or unsanctioned. A sanctioned change must be promoted into the deployment manifest so it survives the next deployment and applies to peer devices. An unsanctioned change must be reverted by reapplying the manifest, and the reason for the local change investigated - a nuisance alarm that drove someone to widen a threshold is a real problem that needs solving properly.\n\nNEVER silently revert a threshold without checking why it was changed. The local operator usually had a reason."
+  },
+  {
+    "id": "SOP-EDGE-003",
+    "title": "SOP: Edge Deployment, OTA Update and Rollback",
+    "docType": "runbook",
+    "classification": "internal",
+    "effectiveDate": "2025-06-15",
+    "reviewDate": "2027-06-15",
+    "owner": "OT Platform Manager",
+    "assetClasses": ["gateway"],
+    "useCases": ["UC5"],
+    "source": "documents/knowledge-base/runbook-edge-fleet.json",
+    "content": "RING STRATEGY. Never deploy to the whole fleet at once. Ring 0 is a lab or bench device. Ring 1 is 2-3 non-critical field devices, soaked for 72 hours. Ring 2 is 10% of the fleet, soaked for 7 days. Ring 3 is the remainder. Critical sites are always last.\n\nSUCCESS CRITERIA BEFORE ADVANCING A RING. All target devices report the new deployment as applied. Module restart count is zero after the first five minutes. Telemetry completeness is above 99% for the soak period. No new alarm patterns. Resource usage - CPU, memory, disk - within 20% of the previous baseline.\n\nMAINTENANCE WINDOWS. Deploy outside peak demand. For water utilities avoid the morning and evening demand peaks and avoid any period of active operational work such as a burst response or a planned shutdown.\n\nROLLBACK TRIGGERS. Roll back immediately on any of: more than 10% of the ring failing to apply the deployment, any device entering a restart loop, telemetry completeness dropping below 95%, or loss of an alarm path. Rollback means reapplying the previous known-good manifest - keep it addressable at all times.\n\nCRITICAL ASSETS. Devices on critical duty assets must never be updated while the asset is the sole running unit. Confirm a healthy standby, or a planned outage, before deploying."
+  },
+  {
+    "id": "SOP-EDGE-004",
+    "title": "SOP: Edge Device Certificate Lifecycle and Security Baseline",
+    "docType": "runbook",
+    "classification": "confidential",
+    "effectiveDate": "2025-02-20",
+    "reviewDate": "2026-08-20",
+    "owner": "OT Security Manager",
+    "assetClasses": ["gateway"],
+    "useCases": ["UC5"],
+    "source": "documents/knowledge-base/runbook-edge-fleet.json",
+    "content": "CLASSIFICATION NOTE. This document is confidential. It is returned only to callers whose clearance permits confidential material.\n\nCERTIFICATE LIFECYCLE. Device identity certificates are issued from the utility OT PKI with a 24-month validity. Renewal must complete before 30 days remain. Inside 30 days the device is placed on the renewal work queue automatically; inside 7 days it is escalated to P2 because expiry causes an immediate and total loss of the device.\n\nRENEWAL METHODS. Preferred is automatic renewal via EST where the device supports it. Otherwise renewal is performed during a scheduled site visit, bundled with other planned work at that site to avoid a dedicated trip.\n\nSECURITY BASELINE FOR EDGE DEVICES. Secure boot enabled. Disk encryption enabled. TPM or HSM-backed key storage where the hardware supports it. No inbound ports open from the internet - all communication is device-initiated outbound over AMQP or MQTT on 443. Local management interfaces disabled or restricted to the OT management VLAN. Default credentials removed. Runtime and OS patched within the agreed window.\n\nOT NETWORK SEGMENTATION. Edge devices sit in the OT network segment with a one-way path to the cloud ingest endpoint. There is no path from IT to OT control. Any agent or application with write capability to a control system is out of scope for this platform - Edge IQ is read-only against OT and writes only to the maintenance management system.\n\nINCIDENT INDICATORS. Unexpected certificate renewal requests, authentication failures from unknown device identities, module images not matching the signed manifest digest, or outbound connections to endpoints outside the approved list. Any of these is a security incident, not an operations issue, and must be routed to the OT Security Manager immediately."
+  }
+]

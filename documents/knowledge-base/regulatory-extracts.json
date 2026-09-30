@@ -1,0 +1,67 @@
+[
+  {
+    "id": "REG-EPA-001",
+    "title": "Regulatory Extract: US EPA National Primary Drinking Water Regulations",
+    "docType": "regulation",
+    "classification": "public",
+    "effectiveDate": "2024-01-01",
+    "reviewDate": "2026-12-31",
+    "owner": "Regulatory Liaison",
+    "assetClasses": ["analyser"],
+    "useCases": ["UC2"],
+    "source": "documents/knowledge-base/regulatory-extracts.json",
+    "content": "JURISDICTION. United States, 40 CFR Part 141. Enforced by EPA and primacy states.\n\nDISINFECTANT RESIDUAL. A detectable residual disinfectant must be maintained throughout the distribution system. Under the Surface Water Treatment Rule the residual entering distribution must not fall below 0.2 mg/L for more than 4 hours, and must be detectable in at least 95% of distribution samples per month. Maximum residual disinfectant level for chlorine is 4.0 mg/L as a running annual average. Citation 40 CFR 141.72, 141.65.\n\nTURBIDITY. For conventional and direct filtration under the Interim Enhanced SWTR, combined filter effluent turbidity must be at or below 0.3 NTU in 95% of measurements each month, and must never exceed 1 NTU. Individual filter effluent above 1.0 NTU in two consecutive 15-minute readings triggers a filter self-assessment. Citation 40 CFR 141.173.\n\nMICROBIOLOGICAL - REVISED TOTAL COLIFORM RULE. Any total coliform positive sample triggers repeat sampling and a Level 1 or Level 2 assessment depending on the trigger conditions. An E. coli positive is an acute violation requiring Tier 1 public notification. Citation 40 CFR 141 Subpart Y.\n\nLEAD AND COPPER. Lead action level 0.015 mg/L, copper 1.3 mg/L, both at the 90th percentile of tap samples. Exceedance triggers corrosion control treatment review and public education. Citation 40 CFR 141 Subpart I.\n\nDISINFECTION BY-PRODUCTS. Total trihalomethanes 0.080 mg/L and five haloacetic acids 0.060 mg/L, both as locational running annual averages. Citation 40 CFR 141 Subpart L. Note the tension with residual maintenance - raising chlorine to hold residual raises DBP formation.\n\nPUBLIC NOTIFICATION TIERS. Tier 1, 24 hours, for acute risks including E. coli in distribution and waterborne disease outbreak. Tier 2, 30 days, for other MCL violations. Tier 3, one year, for monitoring and reporting violations. Citation 40 CFR 141 Subpart Q.\n\nUSE IN EDGE IQ. These values are loaded into the regulatory_limits reference table and served by water-quality.get_regulatory_limits. Agents must read limits from that tool and cite the regulation. Agents must never state a limit from memory."
+  },
+  {
+    "id": "REG-DWI-001",
+    "title": "Regulatory Extract: UK Water Supply (Water Quality) Regulations",
+    "docType": "regulation",
+    "classification": "public",
+    "effectiveDate": "2024-01-01",
+    "reviewDate": "2026-12-31",
+    "owner": "Regulatory Liaison",
+    "assetClasses": ["analyser"],
+    "useCases": ["UC2"],
+    "source": "documents/knowledge-base/regulatory-extracts.json",
+    "content": "JURISDICTION. England and Wales, the Water Supply (Water Quality) Regulations 2016 as amended. Enforced by the Drinking Water Inspectorate.\n\nPRESCRIBED CONCENTRATIONS OR VALUES. Turbidity 4 NTU at consumers' taps, with a 1 NTU operational standard at treatment works final water. pH 6.5 to 9.5. Iron 200 micrograms per litre. Manganese 50 micrograms per litre. Lead 10 micrograms per litre. Nitrate 50 mg/L as NO3. Coliform bacteria 0 per 100 mL. E. coli 0 per 100 mL.\n\nDISINFECTION RESIDUAL. There is no statutory numeric minimum residual in the regulations; instead the company must ensure water is wholesome and that disinfection is effective and continuously monitored. In practice companies operate to an internal minimum residual, commonly 0.2 mg/L free chlorine in distribution, and the DWI expects that standard to be documented and met.\n\nREGULATION 28 - NOTIFICATION. Water companies must notify the DWI of any event which affects or is likely to affect the quality of water supplied, as soon as reasonably practicable and in any event within 24 hours, and provide a full written report within 28 days.\n\nEVENT RISK INDEX. The DWI assesses notified events using its Event Risk Index, which considers population affected, duration, the nature of the contaminant and the adequacy of the company's response. A slow or poorly evidenced response materially increases the assessed score - which is why a complete, timestamped evidence trail matters as much as the technical response itself.\n\nUSE IN EDGE IQ. The UK-DWI regime is selectable via the EDGEIQ_REGULATORY_REGIME parameter. Setting it changes which limits water-quality.check_compliance applies and which citations agents quote."
+  },
+  {
+    "id": "REG-WHO-001",
+    "title": "Regulatory Extract: WHO Guidelines for Drinking-water Quality",
+    "docType": "regulation",
+    "classification": "public",
+    "effectiveDate": "2022-01-01",
+    "reviewDate": "2027-12-31",
+    "owner": "Regulatory Liaison",
+    "assetClasses": ["analyser"],
+    "useCases": ["UC2"],
+    "source": "documents/knowledge-base/regulatory-extracts.json",
+    "content": "STATUS. The WHO Guidelines for Drinking-water Quality, fourth edition incorporating the first and second addenda, are guidance rather than law. They are the default regime in Edge IQ where no national regime is configured, and the basis for most national standards.\n\nGUIDELINE VALUES. Free chlorine - no health-based guideline value is set because chlorine is not of health concern at concentrations used for disinfection; a provisional value of 5 mg/L is noted. For effective disinfection a residual of at least 0.5 mg/L after 30 minutes contact at pH below 8.0 is recommended at the treatment works, and at least 0.2 mg/L should be maintained throughout distribution. Turbidity - should be below 1 NTU for effective disinfection and ideally below 0.2 NTU at the point of disinfection; below 5 NTU is usually acceptable to consumers. pH - no health-based value; 6.5 to 8.5 is the operational range for effective disinfection and corrosion control. E. coli - must not be detectable in any 100 mL sample. Lead 10 micrograms per litre, provisional. Arsenic 10 micrograms per litre, provisional. Nitrate 50 mg/L as NO3. Manganese 80 micrograms per litre as a health-based value.\n\nWATER SAFETY PLAN FRAMEWORK. WHO's central recommendation is a preventive risk-management approach spanning the whole supply chain from catchment to consumer, rather than reliance on end-product testing. Continuous online monitoring at the edge, with automated validity checking, is precisely the operational monitoring layer a Water Safety Plan calls for.\n\nUSE IN EDGE IQ. WHO is the default regime. Set EDGEIQ_REGULATORY_REGIME to US-EPA or UK-DWI to switch."
+  },
+  {
+    "id": "REG-ISO-001",
+    "title": "Standards Extract: ISO 10816-3 and ISO 20816-3 Mechanical Vibration",
+    "docType": "regulation",
+    "classification": "public",
+    "effectiveDate": "2023-01-01",
+    "reviewDate": "2027-12-31",
+    "owner": "Reliability Engineering Manager",
+    "assetClasses": ["pump", "motor", "blower"],
+    "useCases": ["UC1"],
+    "source": "documents/knowledge-base/regulatory-extracts.json",
+    "content": "SCOPE. Evaluation of machine vibration by measurements on non-rotating parts, for industrial machines with nominal power above 15 kW and nominal speeds between 120 and 15000 rpm when measured in situ. ISO 20816-3 supersedes ISO 10816-3 but the zone boundaries are unchanged, and the older designation remains in common industrial use.\n\nMEASURED QUANTITY. Broadband velocity RMS over 10 to 1000 Hz, measured on the bearing housings in the radial directions and axially where relevant. The highest value across measurement points governs.\n\nMACHINE GROUPS. Group 1 - large machines above 75 kW, or 160 to 315 mm shaft height. Group 2 - medium machines 15 to 75 kW, or 80 to 160 mm shaft height. Support classification is rigid or flexible, determined by whether the first natural frequency of the machine-support system is above or below the main excitation frequency.\n\nZONE BOUNDARIES, RIGID SUPPORT. Group 2 (15-75 kW): A/B 2.3, B/C 4.5, C/D 7.1 mm/s RMS. Group 1 (above 75 kW): A/B 3.5, B/C 7.1, C/D 11.0 mm/s RMS.\nZONE BOUNDARIES, FLEXIBLE SUPPORT. Group 2: A/B 3.5, B/C 7.1, C/D 11.0. Group 1: A/B 5.5, B/C 11.0, C/D 18.0 mm/s RMS.\n\nZONE DEFINITIONS. A - vibration of newly commissioned machines. B - acceptable for unrestricted long-term operation. C - unsatisfactory for long-term continuous operation; suitable only for a limited period until a corrective opportunity arises. D - of sufficient severity to cause damage.\n\nCHANGE CRITERION. The standard explicitly recognises that a significant CHANGE in vibration magnitude is meaningful even within zone A or B. A change of 25% of the upper boundary of zone B should be investigated. This is the basis for trend-based alerting in Edge IQ.\n\nUSE IN EDGE IQ. Implemented in asset-registry.get_vibration_limits, which selects the band from the asset's nameplate rated power. Agents must resolve the band through that tool rather than assuming a threshold."
+  },
+  {
+    "id": "REG-NIS-001",
+    "title": "Standards Extract: IEC 62443 and Critical Infrastructure Obligations for OT",
+    "docType": "regulation",
+    "classification": "internal",
+    "effectiveDate": "2024-06-01",
+    "reviewDate": "2026-06-01",
+    "owner": "OT Security Manager",
+    "assetClasses": ["gateway"],
+    "useCases": ["UC5"],
+    "source": "documents/knowledge-base/regulatory-extracts.json",
+    "content": "CONTEXT. Water and wastewater utilities are designated critical national infrastructure in most jurisdictions. In the EU and UK this brings NIS/NIS2 obligations; in the US, AWIA section 2013 requires risk and resilience assessments and emergency response plans for community water systems.\n\nIEC 62443 ZONES AND CONDUITS. The control system is segmented into zones of common security requirement, connected by controlled conduits. Edge IQ sits in the DMZ/enterprise zone and consumes data through a one-way conduit from the OT zone. There is no reverse path from Edge IQ to process control.\n\nSECURITY LEVELS. SL1 protection against casual or coincidental violation. SL2 against intentional violation using simple means. SL3 against sophisticated means with moderate resources. SL4 against sophisticated means with extended resources. Water utility control networks are commonly targeted at SL2 with critical zones at SL3.\n\nIMPLICATIONS FOR THIS PLATFORM. Telemetry flows outbound from edge to cloud only, device-initiated, over TLS on 443, with no inbound listener. Device identity is certificate based and rotated on a 24-month cycle. Module images are signed and the deployment manifest digest is verified. Edge IQ has no write path to any control system; its only write capability is to the maintenance management system, and that is gated on explicit human approval plus a platform write flag.\n\nREPORTABLE INCIDENTS. Unauthorised access to OT systems, loss of control or monitoring capability affecting supply, and any incident with the potential to affect water quality or continuity of supply. Reporting deadlines are short - 24 hours for initial notification under NIS2. A complete, timestamped audit trail of automated analysis and human decisions materially assists that reporting."
+  }
+]

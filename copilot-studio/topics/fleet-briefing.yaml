@@ -1,0 +1,149 @@
+kind: AdaptiveDialog
+
+# =============================================================================
+# Morning Fleet Briefing
+# =============================================================================
+# Runs on a schedule (Power Automate) or on demand. Posts the overnight
+# exception summary to the control room Teams channel at shift handover.
+#
+# This is the "push" half of Edge IQ. The ask-edge-iq topic answers questions
+# people think to ask; this topic surfaces the things nobody thought to ask.
+# =============================================================================
+
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    displayName: Fleet briefing
+    triggerQueries:
+      - Morning briefing
+      - Fleet briefing
+      - Overnight summary
+      - What happened overnight
+      - Shift handover
+      - Give me the daily rundown
+
+  actions:
+
+    - kind: SendActivity
+      id: ack
+      activity: Building the overnight briefing...
+
+    # -------------------------------------------------------------------------
+    # Five parallel questions, one per use case. Each goes to its own specialist
+    # via the orchestrator's deterministic routing - no planner round trip.
+    # -------------------------------------------------------------------------
+
+    - kind: InvokeConnectorAction
+      id: fleetStatus
+      connectionReference: edgeiq_orchestrator
+      operationId: askEdgeIQ
+      connectionProperties: { mode: UserAuthentication }
+      inputs:
+        binding:
+          body:
+            question: >-
+              Summarise edge fleet health over the last 24 hours. List any device
+              that is offline, disconnecting repeatedly, has a certificate
+              expiring within 30 days, or has drifted from its desired module
+              twin configuration.
+            conversationId: =System.Conversation.Id
+      output:
+        binding: { answer: Topic.FleetAnswer }
+
+    - kind: InvokeConnectorAction
+      id: assetRisk
+      connectionReference: edgeiq_orchestrator
+      operationId: askEdgeIQ
+      connectionProperties: { mode: UserAuthentication }
+      inputs:
+        binding:
+          body:
+            question: >-
+              Which rotating assets have a rising vibration trend? For each give
+              the current ISO 10816-3 zone, the trend slope and the estimated
+              days until the next zone boundary.
+            conversationId: =System.Conversation.Id
+      output:
+        binding: { answer: Topic.AssetAnswer }
+
+    - kind: InvokeConnectorAction
+      id: waterQuality
+      connectionReference: edgeiq_orchestrator
+      operationId: askEdgeIQ
+      connectionProperties: { mode: UserAuthentication }
+      inputs:
+        binding:
+          body:
+            question: >-
+              Were there any chlorine residual excursions in the last 24 hours?
+              Separately, flag any analyser whose reading is flatlined or
+              otherwise suspect - do not treat a suspect analyser as compliant.
+            conversationId: =System.Conversation.Id
+      output:
+        binding: { answer: Topic.QualityAnswer }
+
+    - kind: InvokeConnectorAction
+      id: leakSignal
+      connectionReference: edgeiq_orchestrator
+      operationId: askEdgeIQ
+      connectionProperties: { mode: UserAuthentication }
+      inputs:
+        binding:
+          body:
+            question: >-
+              Which DMAs show minimum night flow rising above their 90-day
+              baseline? Give the annualised loss in cubic metres for each.
+            conversationId: =System.Conversation.Id
+      output:
+        binding: { answer: Topic.LeakAnswer }
+
+    - kind: InvokeConnectorAction
+      id: energySignal
+      connectionReference: edgeiq_orchestrator
+      operationId: askEdgeIQ
+      connectionProperties: { mode: UserAuthentication }
+      inputs:
+        binding:
+          body:
+            question: >-
+              Which pumps have a degrading specific energy consumption, and
+              which ran significant hours during peak tariff yesterday? Quantify
+              the annual cost.
+            conversationId: =System.Conversation.Id
+      output:
+        binding: { answer: Topic.EnergyAnswer }
+
+    # -------------------------------------------------------------------------
+    # Compose. Ordered by consequence: public health first, then supply
+    # continuity, then asset integrity, then cost.
+    # -------------------------------------------------------------------------
+
+    - kind: SendActivity
+      id: briefing
+      activity: |
+        # Edge IQ - Overnight Briefing
+        {Text(Now(), "dddd d mmmm yyyy, hh:mm")}
+
+        ## 1. Water quality
+        {Topic.QualityAnswer}
+
+        ## 2. Edge fleet
+        {Topic.FleetAnswer}
+
+        ## 3. Asset health
+        {Topic.AssetAnswer}
+
+        ## 4. Distribution losses
+        {Topic.LeakAnswer}
+
+        ## 5. Pump energy
+        {Topic.EnergyAnswer}
+
+        ---
+        Every figure above is drawn from the gold layer in OneLake and
+        cross-checked against the governed procedure library. Ask a follow-up
+        on any line and Edge IQ will route it to the relevant specialist.
+
+        No action in this briefing has been taken automatically. Work orders
+        require approval in the [Edge IQ console]({Global.EdgeIqConsoleUrl}).

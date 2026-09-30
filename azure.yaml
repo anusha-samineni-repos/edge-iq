@@ -1,0 +1,78 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: edge-iq
+metadata:
+  template: edge-iq-water-utility@1.0
+
+environment:
+  name: edge-iq
+  location: eastus2
+
+requiredVersions:
+  azd: ">= 1.15.0"
+
+infra:
+  provider: bicep
+  path: infra
+  module: main
+
+services:
+  api:
+    project: ./src/api/python
+    language: python
+    host: containerapp
+    docker:
+      path: ./ApiApp.Dockerfile
+      context: .
+  web:
+    project: ./src/App
+    language: js
+    host: containerapp
+    dist: dist
+    docker:
+      path: ./WebApp.Dockerfile
+      context: .
+
+hooks:
+  preprovision:
+    windows:
+      shell: pwsh
+      interactive: true
+      run: |
+        Write-Host ""
+        Write-Host "  Edge IQ - Water Utility Edge Intelligence Accelerator" -ForegroundColor Cyan
+        Write-Host "  Provisioning: Foundry | Fabric | Cosmos DB | IoT Hub | Search | Container Apps" -ForegroundColor Yellow
+        Write-Host "  Edit infra/main.parameters.json to change any parameter." -ForegroundColor Yellow
+        Write-Host ""
+    posix:
+      shell: sh
+      interactive: true
+      run: |
+        printf '\n\033[36m  Edge IQ - Water Utility Edge Intelligence Accelerator\033[0m\n'
+        printf '\033[33m  Provisioning: Foundry | Fabric | Cosmos DB | IoT Hub | Search | Container Apps\033[0m\n'
+        printf '\033[33m  Edit infra/main.parameters.json to change any parameter.\033[0m\n\n'
+
+  postprovision:
+    windows:
+      shell: pwsh
+      interactive: true
+      continueOnError: false
+      run: |
+        Write-Host "Post-provision steps:" -ForegroundColor Yellow
+        Write-Host "  1. .\infra\scripts\seed\seed-cosmos.ps1        # seed asset registry + work orders" -ForegroundColor Cyan
+        Write-Host "  2. .\infra\scripts\seed\seed-search-index.ps1  # build Foundry IQ knowledge index" -ForegroundColor Cyan
+        Write-Host "  3. .\infra\scripts\seed\register-agents.ps1    # register Foundry agents" -ForegroundColor Cyan
+        Write-Host "  4. python data\generators\generate_telemetry.py --days 30 --out data\customdata" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "Web app: $env:WEB_APP_URL" -ForegroundColor Green
+    posix:
+      shell: sh
+      interactive: true
+      continueOnError: false
+      run: |
+        echo "Post-provision steps:"
+        echo "  1. bash ./infra/scripts/seed/seed-cosmos.sh"
+        echo "  2. bash ./infra/scripts/seed/seed-search-index.sh"
+        echo "  3. bash ./infra/scripts/seed/register-agents.sh"
+        echo "  4. python data/generators/generate_telemetry.py --days 30 --out data/customdata"
+        echo ""
+        echo "Web app: $WEB_APP_URL"

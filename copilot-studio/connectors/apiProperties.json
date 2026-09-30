@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.PowerApps/schemas/2015-01-01/apiProperties.json#",
+  "properties": {
+    "connectionParameters": {
+      "token": {
+        "type": "oauthSetting",
+        "oAuthSettings": {
+          "identityProvider": "aadcertificate",
+          "clientId": "<API_CLIENT_ID>",
+          "scopes": [
+            "api://<API_CLIENT_ID>/EdgeIQ.Read"
+          ],
+          "redirectMode": "Global",
+          "redirectUrl": "https://global.consent.azure-apim.net/redirect",
+          "properties": {
+            "IsFirstParty": "False",
+            "AzureActiveDirectoryResourceId": "api://<API_CLIENT_ID>",
+            "IsOnbehalfofLoginSupported": true
+          },
+          "customParameters": {
+            "loginUri": {
+              "value": "https://login.microsoftonline.com"
+            },
+            "tenantId": {
+              "value": "<TENANT_ID>"
+            },
+            "resourceUri": {
+              "value": "api://<API_CLIENT_ID>"
+            },
+            "enableOnbehalfOfLogin": {
+              "value": true
+            }
+          }
+        },
+        "uiDefinition": {
+          "displayName": "Sign in with your work account",
+          "description": "Edge IQ answers as you. Your Fabric row-level security and Microsoft 365 permissions are enforced on every question.",
+          "tooltip": "Microsoft Entra ID sign-in",
+          "constraints": {
+            "required": "true"
+          }
+        }
+      }
+    },
+    "iconBrandColor": "#0F6CBD",
+    "capabilities": [],
+    "publisher": "<ORGANISATION_NAME>",
+    "stackOwner": "<ORGANISATION_NAME>",
+    "policyTemplateInstances": [
+      {
+        "templateId": "setheader",
+        "title": "Forward the calling user to Edge IQ",
+        "parameters": {
+          "x-ms-apimTemplateParameter.name": "X-Edge-IQ-Channel",
+          "x-ms-apimTemplateParameter.value": "copilot-studio",
+          "x-ms-apimTemplateParameter.existsAction": "override",
+          "x-ms-apimTemplate-operationName": [
+            "askEdgeIQ",
+            "previewRoute"
+          ]
+        }
+      }
+    ]
+  }
+}

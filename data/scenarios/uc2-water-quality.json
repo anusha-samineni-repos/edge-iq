@@ -1,0 +1,62 @@
+{
+  "$schema": "./scenario.schema.json",
+  "id": "UC2",
+  "title": "Water quality and regulatory compliance",
+  "summary": "Chlorine residual decays below the action level at one reservoir while a second reservoir's analyser silently fails. Edge IQ must escalate the first and NOT escalate the second - telling a real excursion apart from a dead instrument.",
+  "primaryAgent": "water-quality",
+  "supportingAgents": ["knowledge-navigator", "asset-health"],
+  "mcpServers": ["water_quality", "historian", "asset_registry"],
+  "iqLayers": {
+    "fabricIq": "Chlorine residual series and the compliance rollup per site.",
+    "foundryIq": "Residual action levels, sampling obligations and the reporting SOP.",
+    "workIq": "Regulator correspondence and the compliance calendar."
+  },
+  "seededFault": {
+    "device": "RES-03-CL2-001",
+    "site": "RES-03",
+    "signal": "chlorine_mg_l",
+    "behaviour": "Decays to 0.14 mg/L, breaching the 0.2 mg/L action level on 3 days.",
+    "why": "A genuine excursion. Residual falls, then sits pinned at its floor - flat, but flat at a breach level.",
+    "tunableIn": "data/generators/generate_telemetry.py -> SCENARIO['uc2_min_chlorine']"
+  },
+  "secondFault": {
+    "device": "RES-07-CL2-001",
+    "site": "RES-07",
+    "signal": "chlorine_mg_l",
+    "behaviour": "Reports exactly 0.52 mg/L for 3 straight days - zero variance.",
+    "why": "A dead analyser, not a water quality event. 0.52 is comfortably in range, so a naive threshold alarm sees nothing at all while the utility is flying blind on that reservoir.",
+    "tunableIn": "data/generators/generate_telemetry.py -> SCENARIO['uc2_flatline_device']"
+  },
+  "designNote": "The classifier requires invariant readings AND zero breaches before calling an analyser suspect. Without the second condition, RES-03's genuine breach - which is also invariant, because a decayed residual sits on its floor - gets dismissed as an instrument fault. That is the failure mode that matters: it would suppress a real public health event. The rule lives in infra/scripts/seed/seed_cosmos.py -> shape_compliance().",
+  "script": [
+    {
+      "step": 1,
+      "ask": "Did any chlorine residual breach compliance limits in the last 30 days, and which sites were affected?",
+      "expect": "Routes to water-quality. Reports RES-03 with 3 breach days, cites the action level from the knowledge base.",
+      "watchFor": "RES-07 must NOT appear as a breach. It has no breaches - it has no real readings at all."
+    },
+    {
+      "step": 2,
+      "ask": "Is the chlorine analyser at RES-07 reporting correctly, or do we have an instrument fault?",
+      "expect": "Flags RES-07 as a suspect analyser: 4 suspect days, invariant readings, no breaches. Recommends calibration, not a water quality escalation.",
+      "watchFor": "This is the interesting answer. The value is in range, so nothing alarmed - the fault is the absence of variation, which only shows up if you look for it."
+    },
+    {
+      "step": 3,
+      "ask": "What are our reporting obligations for the RES-03 excursion, and by when?",
+      "expect": "Foundry IQ returns the notification SOP with timescales.",
+      "watchFor": "Citations should be regulatory documents, and the classification badges should show the governance ceiling being applied."
+    },
+    {
+      "step": 4,
+      "ask": "Summarise both issues for the duty manager, separating what is a water quality risk from what is an instrument problem.",
+      "expect": "One briefing that keeps the two cases distinct and recommends different actions for each.",
+      "watchFor": "Conflating them is the failure. One needs a tanker and a notification; the other needs a technician with a calibration kit."
+    }
+  ],
+  "talkingPoints": [
+    "Threshold alarms miss a stuck sensor entirely - the reading looks healthy. Edge IQ reasons about the shape of the signal, not just its value.",
+    "The distinction is deliberately hard: both signals are flat. Only the breach count separates them.",
+    "Getting this wrong in the safe direction still costs you - a suppressed excursion is a public health failure, not a false positive."
+  ]
+}

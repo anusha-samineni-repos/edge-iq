@@ -1,0 +1,54 @@
+[
+  {
+    "id": "SOP-ROT-001",
+    "title": "SOP: Vibration Assessment of Rotating Assets (ISO 10816-3)",
+    "docType": "sop",
+    "classification": "internal",
+    "effectiveDate": "2025-02-01",
+    "reviewDate": "2027-02-01",
+    "owner": "Reliability Engineering Manager",
+    "assetClasses": ["pump", "motor", "blower"],
+    "useCases": ["UC1"],
+    "source": "documents/knowledge-base/sop-asset-health.json",
+    "content": "STANDARD. ISO 10816-3 classifies broadband velocity RMS (10-1000 Hz) for industrial machines on rigid foundations into four evaluation zones. The zone boundaries depend on rated power, so the machine's nameplate kW must be resolved before any judgement is made.\n\nZONE BOUNDARIES, GROUP 2 (15 kW to 75 kW), RIGID MOUNTING. A/B 2.3 mm/s, B/C 4.5 mm/s, C/D 7.1 mm/s.\nZONE BOUNDARIES, GROUP 1 (above 75 kW), RIGID MOUNTING. A/B 3.5 mm/s, B/C 7.1 mm/s, C/D 11.0 mm/s.\nSMALL MACHINES (up to 15 kW). A/B 1.4 mm/s, B/C 2.8 mm/s, C/D 4.5 mm/s.\n\nZONE MEANING. A - newly commissioned condition. B - acceptable for unrestricted long-term operation. C - unsatisfactory for continuous operation; the machine may run for a limited period while a repair is planned. D - severe enough to cause damage; the machine should be taken out of service.\n\nTHE TREND MATTERS MORE THAN THE ABSOLUTE VALUE. A machine steady at 4.0 mm/s for two years is a lower risk than one that has moved from 1.8 to 3.9 mm/s in ten days. Always report the rate of change and the projected date of crossing the next zone boundary alongside the current level.\n\nACTION BY ZONE. Zone A or B and stable: no action, continue routine monitoring. Zone B and rising: increase monitoring to daily, raise a P4 inspection. Zone C: raise a P3 work order, plan the intervention within 30 days, monitor daily. Zone C and rising quickly, or Zone D: raise a P2 work order, plan within 7 days, consider switching duty to the standby unit immediately. Zone D on a critical duty asset with no standby: P1, mobilise now.\n\nCONFIRMATION. Never act on a single sample. Require at least three consecutive elevated readings, and confirm data completeness above 90% for the assessment window before drawing a conclusion."
+  },
+  {
+    "id": "SOP-ROT-002",
+    "title": "SOP: Bearing Degradation Diagnosis and Response",
+    "docType": "sop",
+    "classification": "internal",
+    "effectiveDate": "2025-02-01",
+    "reviewDate": "2027-02-01",
+    "owner": "Reliability Engineering Manager",
+    "assetClasses": ["pump", "motor", "blower"],
+    "useCases": ["UC1"],
+    "source": "documents/knowledge-base/sop-asset-health.json",
+    "content": "SIGNATURE. Rolling-element bearing degradation is the most common failure mode on water utility pumps. Its confirmed signature is a rising broadband velocity RMS accompanied by a rising bearing temperature, typically 5-15 degrees C above the established baseline for that duty point, and increasing high-frequency energy. Crucially, motor current and hydraulic performance stay near normal until the very late stage - which is why a bearing fault is invisible to a control system watching only flow and pressure.\n\nDISCRIMINATING FROM OTHER FAULTS. Rising vibration with a DROP in discharge pressure and flow indicates impeller wear or a hydraulic problem, not a bearing. Rising vibration that appears as a step change after maintenance indicates misalignment or an unbalanced assembly. Rising vibration with erratic suction pressure and a characteristic crackling broadband signature indicates cavitation - fix the suction condition, not the bearing. Rising vibration only at particular speeds indicates a resonance issue.\n\nP-F INTERVAL. From first detectable vibration rise to functional failure is typically 30 to 90 days on a water pump under steady duty. This is ample planning time - which is the whole point of condition monitoring. Do not let a detected bearing fault become an emergency.\n\nRESPONSE. Confirm the trend over at least 72 hours. Resolve the ISO zone using rated power. Check the maintenance history for a recent bearing replacement - an early-life failure points at installation quality or lubrication, and replacing it the same way will reproduce the fault. Check spare parts availability before committing to a date. Switch duty to the standby unit if one is available and healthy. Raise the work order at the priority given by SOP-ROT-001.\n\nPARTS. A bearing change normally requires the bearing set, the mechanical seal (always replace on disassembly), and a coupling alignment afterwards. Budget 6 to 10 hours for a horizontal split-case pump."
+  },
+  {
+    "id": "SOP-ROT-003",
+    "title": "SOP: Cavitation Detection and Correction",
+    "docType": "sop",
+    "classification": "internal",
+    "effectiveDate": "2025-04-01",
+    "reviewDate": "2027-04-01",
+    "owner": "Mechanical Engineering Lead",
+    "assetClasses": ["pump"],
+    "useCases": ["UC1", "UC4"],
+    "source": "documents/knowledge-base/sop-asset-health.json",
+    "content": "MECHANISM. Cavitation occurs when the local pressure at the impeller eye falls below the vapour pressure of water, forming bubbles that collapse violently downstream. It erodes the impeller, damages seals and bearings, and destroys efficiency.\n\nSIGNATURE. Erratic broadband vibration with high crest factor, a distinctive gravel-in-the-pump sound, fluctuating discharge pressure, falling flow at constant speed, and low or unstable suction pressure. The vibration is noisier and less steady than bearing degradation.\n\nROOT CAUSES IN ORDER OF FREQUENCY. Blocked or partially closed suction strainer. Low wet well or sump level. Air entrainment from a vortex at the suction bell. Operating far right of the best efficiency point, which raises NPSH required. Suction line restriction or a throttled suction valve. Rising water temperature reducing available NPSH.\n\nRESPONSE. Cavitation is urgent - the damage accumulates every hour the pump runs. Reduce speed or throttle on the DISCHARGE side, never the suction. Restore suction level. Inspect and clean the strainer. Verify the suction valve is fully open. If the pump is operating far off its best efficiency point, review the duty selection.\n\nDO NOT confuse cavitation with a bearing fault. Both raise vibration. Only cavitation degrades hydraulic performance at the same time. Always look at suction pressure and flow before concluding."
+  },
+  {
+    "id": "REF-FMEA-001",
+    "title": "Reference: Failure Mode Library for Water Utility Rotating Assets",
+    "docType": "reference",
+    "classification": "internal",
+    "effectiveDate": "2025-01-01",
+    "reviewDate": "2027-01-01",
+    "owner": "Reliability Engineering Manager",
+    "assetClasses": ["pump", "motor", "blower", "valve"],
+    "useCases": ["UC1", "UC4"],
+    "source": "documents/knowledge-base/sop-asset-health.json",
+    "content": "Each entry gives the failure mode, its detectable telemetry signature, typical lead time from first detection to functional failure, and the recommended action.\n\nPUMP - BEARING WEAR. Vibration RMS rising, bearing temperature +5 to +15 C, hydraulic performance normal. Lead time 30-90 days. Replace bearing set and mechanical seal; realign coupling. Severity high.\n\nPUMP - IMPELLER WEAR. Flow and discharge pressure falling at constant speed and current, specific energy rising, vibration mildly elevated. Lead time 90-180 days. Overhaul or replace impeller and wear rings. Severity medium.\n\nPUMP - CAVITATION. Erratic high-crest-factor vibration, unstable suction pressure, falling flow. Lead time 7-30 days, damage accumulates continuously. Restore suction conditions. Severity high.\n\nPUMP - MECHANICAL SEAL FAILURE. Seal chamber leakage, rising bearing temperature from contamination, gland flush flow anomalies. Lead time 14-45 days. Replace seal. Severity medium.\n\nPUMP - MISALIGNMENT. Step increase in vibration after maintenance, dominant twice-running-speed component, elevated coupling temperature. Lead time 60-180 days. Laser realign. Severity medium.\n\nPUMP - SUCTION BLOCKAGE. Falling suction pressure, falling flow, rising motor current relative to flow. Lead time 1-7 days. Clean strainer. Severity high.\n\nMOTOR - WINDING INSULATION DEGRADATION. Rising winding temperature at constant load, current imbalance across phases, insulation resistance falling. Lead time 30-120 days. Test and rewind or replace. Severity critical.\n\nMOTOR - ROTOR BAR FAULT. Current sidebands around line frequency, torque pulsation, vibration at pole-pass frequency. Lead time 60-180 days. Rotor repair or replacement. Severity high.\n\nBLOWER - FILTER FOULING. Rising differential pressure, rising specific energy, falling air delivery. Lead time 14-60 days. Replace filter element. Severity low.\n\nVALVE - ACTUATOR FAILURE. Position feedback not tracking demand, rising travel time, motor current spikes on stroke. Lead time 7-30 days. Service or replace actuator. Severity medium.\n\nVALVE - SEAT LEAKAGE. Flow present with valve commanded closed, downstream pressure not decaying as expected. Lead time 30-180 days. Reseat or replace. Severity medium.\n\nPRV - CONTROL INSTABILITY. Oscillating downstream pressure, hunting, elevated cycle count. Lead time 7-45 days. Retune pilot, inspect diaphragm. Severity medium. Note this mode is also a burst-risk driver because pressure transients fatigue mains.\n\nANALYSER - FLATLINE/FROZEN SIGNAL. Standard deviation collapsing toward zero, value unchanging across process changes. Lead time immediate - the data is already invalid. Inspect sample line and cell. Severity high because it silently defeats compliance monitoring.\n\nANALYSER - CALIBRATION DRIFT. Slow monotonic offset versus grab samples or a neighbouring analyser. Lead time 14-60 days. Recalibrate. Severity medium.\n\nFLOWMETER - SIGNAL LOSS. Intermittent dropouts, zero readings with known flow present, poor coil health diagnostics. Lead time 7-30 days. Check cabling and earthing. Severity medium.\n\nGATEWAY - STORAGE EXHAUSTION. Store-and-forward buffer filling, rising message latency, eventual data loss. Lead time 1-14 days. Clear buffer, resolve upstream connectivity. Severity high."
+  }
+]

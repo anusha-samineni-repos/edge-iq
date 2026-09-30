@@ -1,0 +1,52 @@
+{
+  "$schema": "./scenario.schema.json",
+  "id": "UC3",
+  "title": "Leak detection and non-revenue water",
+  "summary": "Minimum night flow in a district metered area rises steadily. Edge IQ separates a real leak from legitimate demand change, quantifies the loss and prioritises the find-and-fix against other DMAs.",
+  "primaryAgent": "leak-detection",
+  "supportingAgents": ["maintenance-planner", "knowledge-navigator"],
+  "mcpServers": ["historian", "asset_registry", "work_order"],
+  "iqLayers": {
+    "fabricIq": "DMA night flow series, meter topology and connection counts.",
+    "foundryIq": "IWA water balance methodology and the leak prioritisation SOP.",
+    "workIq": "Field crew availability and prior repair history in the area."
+  },
+  "seededFault": {
+    "dma": "DMA-14",
+    "signal": "min_night_flow_m3_h",
+    "behaviour": "Baseline 11.5 m3/h rising linearly to 19.2 m3/h over the last 9 days.",
+    "why": "Minimum night flow is the cleanest leak signal in distribution: between roughly 02:00 and 04:00 legitimate demand approaches zero, so what remains is largely loss. A 7.7 m3/h rise sustained overnight is not people using water.",
+    "tunableIn": "data/generators/generate_telemetry.py -> SCENARIO['uc3_mnf_peak']"
+  },
+  "script": [
+    {
+      "step": 1,
+      "ask": "Minimum night flow in DMA-14 looks wrong. Is there a leak, and how much water are we losing?",
+      "expect": "Routes to leak-detection. Quantifies the rise against baseline and converts it to a daily loss volume.",
+      "watchFor": "The answer should reason from night flow specifically, not total consumption. Daytime flow moves for a dozen innocent reasons."
+    },
+    {
+      "step": 2,
+      "ask": "Could this just be a new connection or a seasonal change rather than a leak?",
+      "expect": "Addresses the alternative explanations directly - step change versus gradual ramp, connection count, seasonality.",
+      "watchFor": "A good answer engages with the counter-hypothesis. The ramp shape is the evidence: new connections appear as a step, leaks grow."
+    },
+    {
+      "step": 3,
+      "ask": "How does this rank against our other DMAs, and what is the cost of leaving it a month?",
+      "expect": "Compares DMAs and puts a number on delay, including pumping energy for water that never reaches a customer.",
+      "watchFor": "Cross-DMA comparison means the agent queried the estate, not just the one device mentioned."
+    },
+    {
+      "step": 4,
+      "ask": "Raise a leak investigation for DMA-14 with the night flow evidence attached.",
+      "expect": "Drafts the work order with the supporting data, held for approval.",
+      "watchFor": "Approval panel again - the two-key gate applies to every write, not just maintenance."
+    }
+  ],
+  "talkingPoints": [
+    "Non-revenue water is treated, pumped and then lost. The energy is already spent.",
+    "The agent distinguishes a leak from demand growth by trend shape, which is exactly the judgement a threshold alarm cannot make.",
+    "Prioritisation needs estate-wide context - Fabric IQ supplies it."
+  ]
+}

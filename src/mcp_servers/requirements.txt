@@ -1,0 +1,6 @@
+mcp>=1.9.0
+starlette>=0.41.3
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+azure-identity==1.19.0
+azure-cosmos==4.9.0

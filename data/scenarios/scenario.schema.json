@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://edge-iq/scenario.schema.json",
+  "title": "Edge IQ demo scenario",
+  "description": "A guided demo tied to a fault that actually exists in the generated dataset. Every device named here is validated against data/customdata by tests/smoke_scenarios.py, so a scenario cannot quietly drift from the data it describes.",
+  "type": "object",
+  "required": ["id", "title", "summary", "primaryAgent", "script"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^UC[0-9]+$",
+      "description": "Use case identifier, e.g. UC1."
+    },
+    "title": { "type": "string" },
+    "summary": { "type": "string" },
+    "primaryAgent": {
+      "type": "string",
+      "description": "Agent the router should select. Must exist in agents/registry.py."
+    },
+    "supportingAgents": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "mcpServers": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "edge_fleet",
+          "historian",
+          "asset_registry",
+          "water_quality",
+          "work_order"
+        ]
+      }
+    },
+    "iqLayers": {
+      "type": "object",
+      "description": "What each IQ layer contributes to this scenario.",
+      "properties": {
+        "workIq": { "type": "string" },
+        "fabricIq": { "type": "string" },
+        "foundryIq": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "seededFault": { "$ref": "#/$defs/fault" },
+    "secondFault": { "$ref": "#/$defs/fault" },
+    "designNote": {
+      "type": "string",
+      "description": "Why the scenario is built this way, where that is not obvious."
+    },
+    "script": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["step", "ask", "expect"],
+        "additionalProperties": false,
+        "properties": {
+          "step": { "type": "integer", "minimum": 1 },
+          "ask": {
+            "type": "string",
+            "description": "Verbatim question to put to Edge IQ."
+          },
+          "expect": {
+            "type": "string",
+            "description": "What a correct answer contains."
+          },
+          "watchFor": {
+            "type": "string",
+            "description": "What the demonstrator should point out - usually the non-obvious part."
+          }
+        }
+      }
+    },
+    "talkingPoints": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "fault": {
+      "type": "object",
+      "required": ["behaviour", "why"],
+      "additionalProperties": false,
+      "properties": {
+        "device": {
+          "type": "string",
+          "description": "Device ID. Validated against the generated dataset."
+        },
+        "dma": { "type": "string" },
+        "site": { "type": "string" },
+        "signal": { "type": "string" },
+        "behaviour": {
+          "type": "string",
+          "description": "What the data actually does."
+        },
+        "why": {
+          "type": "string",
+          "description": "Why this is a realistic and interesting fault."
+        },
+        "linkedRecords": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "tunableIn": {
+          "type": "string",
+          "description": "Where to change the fault parameters."
+        }
+      }
+    }
+  }
+}

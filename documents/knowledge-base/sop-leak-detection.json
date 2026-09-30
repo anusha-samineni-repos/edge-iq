@@ -1,0 +1,54 @@
+[
+  {
+    "id": "SOP-DMA-001",
+    "title": "SOP: Minimum Night Flow Analysis and Leak Localisation",
+    "docType": "sop",
+    "classification": "internal",
+    "effectiveDate": "2025-05-01",
+    "reviewDate": "2027-05-01",
+    "owner": "Leakage Manager",
+    "assetClasses": ["flowmeter", "prv"],
+    "useCases": ["UC3"],
+    "source": "documents/knowledge-base/sop-leak-detection.json",
+    "content": "PRINCIPLE. Between 02:00 and 04:00 legitimate customer demand falls to its minimum, so the residual inlet flow into a district metered area is dominated by leakage. A rising minimum night flow is the earliest reliable indicator of a new or growing leak.\n\nBASELINE. Establish the MNF baseline from a rolling 90-day median of night-window hours, excluding periods of known mains work, hydrant use or meter fault. Recompute the baseline after any permanent network change.\n\nTRIGGERS. Excess MNF above baseline of 0 to 2 m3/h is within normal variation - no action. 2 to 5 m3/h sustained for 3 or more consecutive nights is a CONFIRMED leak indication - raise a P3 leak investigation. Above 5 m3/h, or any step increase exceeding 3 m3/h in a single night, is a SIGNIFICANT leak or possible burst - raise a P2 and deploy a survey team within 48 hours.\n\nDISCRIMINATE BEFORE YOU DIG. A rising MNF has several innocent explanations that must be excluded first. New legitimate night use - a commercial customer, an industrial process, an agricultural connection or a reservoir filling on a night cycle. Boundary valve status change re-zoning flow between DMAs. Meter under-registration or a flow meter fault - always check the meter's own health and data completeness. A genuine leak shows a sustained, monotonic rise with no weekday/weekend pattern; new commercial demand usually shows a weekday pattern.\n\nCORROBORATING EVIDENCE. A genuine leak also depresses average zone pressure, and the depression grows with the leak. Pressure falling while MNF rises is strong confirmation. Pressure unchanged while MNF rises points at a metering or re-zoning issue instead.\n\nLOCALISATION SEQUENCE. 1) Step testing - progressively close sub-zone valves overnight and watch which closure collapses the flow. 2) Acoustic logging on the identified sub-zone, deployed for 3 to 7 nights. 3) Leak noise correlation between two contact points either side of the suspected leak. 4) Ground microphone pinpointing before excavation. Never excavate on MNF evidence alone.\n\nECONOMICS. Report the leak as an annualised volume and cost so the intervention can be prioritised against other work. Excess MNF in m3/h multiplied by 8760 gives the annual volume; multiply by the marginal cost of water including pumping energy and treatment chemicals."
+  },
+  {
+    "id": "SOP-DMA-002",
+    "title": "SOP: Burst Detection and Emergency Response",
+    "docType": "sop",
+    "classification": "internal",
+    "effectiveDate": "2025-05-01",
+    "reviewDate": "2027-05-01",
+    "owner": "Network Operations Manager",
+    "assetClasses": ["flowmeter", "prv", "valve"],
+    "useCases": ["UC3"],
+    "source": "documents/knowledge-base/sop-leak-detection.json",
+    "content": "DISTINGUISHING A BURST FROM A LEAK. A leak is a gradual rise in flow over days. A burst is a step change within minutes to hours, typically a flow increase above 20% of normal zone inflow combined with a simultaneous pressure drop of 0.5 bar or more. Bursts are an emergency; leaks are planned work.\n\nIMMEDIATE ACTIONS ON BURST DETECTION. Confirm against at least two independent signals - inlet flow and zone pressure - to avoid acting on a single instrument fault. Identify the affected area from the pressure gradient across zone loggers. Assess customer impact including any sensitive customers such as hospitals, dialysis patients, schools and care homes on the priority services register. Deploy the emergency response team. Consider partial isolation to limit the affected area while maintaining supply where possible.\n\nWATER QUALITY CONSEQUENCE. Any significant pressure transient or loss of pressure creates an ingress risk. After a burst, increase chlorine residual and turbidity monitoring in the affected zone for a minimum of 48 hours, and flush before returning the main to normal service. A burst is a water quality event as well as a hydraulic one.\n\nDO NOT AUTOMATE ISOLATION. Valve operation that interrupts customer supply is a human decision. An agent may identify the candidate valves, quantify the affected population and present the trade-off, but the operation itself requires an authorised operator."
+  },
+  {
+    "id": "REF-NRW-001",
+    "title": "Reference: Non-Revenue Water and the IWA Water Balance",
+    "docType": "reference",
+    "classification": "internal",
+    "effectiveDate": "2025-01-01",
+    "reviewDate": "2027-01-01",
+    "owner": "Leakage Manager",
+    "assetClasses": ["flowmeter"],
+    "useCases": ["UC3", "UC4"],
+    "source": "documents/knowledge-base/sop-leak-detection.json",
+    "content": "DEFINITION. Non-revenue water is the difference between the volume put into supply and the volume billed to customers, expressed as a percentage of system input.\n\nIWA COMPONENTS. System input volume splits into authorised consumption and water losses. Authorised consumption splits into billed (revenue water) and unbilled authorised consumption such as firefighting, mains flushing and operational use. Water losses split into apparent losses - meter under-registration, data handling errors and unauthorised consumption - and real losses, which are physical leakage from mains, service reservoirs and service connections.\n\nWHY THE SPLIT MATTERS. Apparent losses are solved with metering and billing work. Real losses are solved with leakage detection and pressure management. Reporting a single NRW percentage without the split leads to the wrong intervention. Always attribute before recommending.\n\nBENCHMARKS. Below 10% is excellent, 10-20% is typical of a well-managed utility, 20-30% indicates significant recoverable loss, above 30% indicates systemic issues. Compare against the Infrastructure Leakage Index rather than a raw percentage when comparing between networks, because percentage NRW is sensitive to consumption density.\n\nFOUR PILLARS OF REAL LOSS CONTROL. Active leakage control - finding leaks that are not reported. Speed and quality of repair. Pressure management - excess pressure both drives leak flow and causes new bursts; reducing average zone pressure is often the single highest-return intervention. Asset management - mains renewal targeted at the worst-performing lengths."
+  },
+  {
+    "id": "SOP-PRV-001",
+    "title": "SOP: Pressure Management and PRV Optimisation",
+    "docType": "sop",
+    "classification": "internal",
+    "effectiveDate": "2025-07-01",
+    "reviewDate": "2027-07-01",
+    "owner": "Network Operations Manager",
+    "assetClasses": ["prv", "valve"],
+    "useCases": ["UC3", "UC4"],
+    "source": "documents/knowledge-base/sop-leak-detection.json",
+    "content": "WHY PRESSURE MANAGEMENT. Leak flow rate varies with pressure raised to roughly the power 1.15 for most leak types, so a 10% reduction in average zone pressure typically yields an 11-12% reduction in leakage volume, plus a disproportionate reduction in new burst frequency because pressure transients drive pipe fatigue.\n\nCONSTRAINT. Minimum service pressure at the critical point must be maintained at all times. The critical point is the highest-elevation or most-remote property in the zone, not the average. Pressure optimisation that breaches minimum service pressure is a regulatory failure and a customer service failure.\n\nMODES. Fixed outlet - simplest, set once, wastes headroom at night. Time modulated - a lower night setpoint, good where demand is predictable. Flow modulated - setpoint follows measured inlet flow, the most effective mode, maintains service pressure at peak while cutting night pressure hard.\n\nINSTABILITY. A hunting or oscillating PRV creates repeated pressure transients that actively cause bursts. Symptoms are oscillating downstream pressure and an elevated actuator cycle count. Retune the pilot and inspect the diaphragm. Treat PRV instability as a burst-prevention priority, not a nuisance."
+  }
+]

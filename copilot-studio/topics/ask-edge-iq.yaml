@@ -1,0 +1,135 @@
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    displayName: Edge estate question
+    triggerQueries:
+      - Why is vibration rising on the pump
+      - Which devices are offline
+      - Is chlorine residual compliant
+      - Which DMA has a leak
+      - What is the pump energy consumption
+      - Show me the edge fleet status
+      - What certificates are expiring
+      - Draft a work order for the pump
+
+  actions:
+
+    # -------------------------------------------------------------------------
+    # 1. Capture the question exactly as the user typed it.
+    #    Do NOT reformulate. Device identifiers and exact phrasing drive the
+    #    deterministic routing rules in agents/routing.py.
+    # -------------------------------------------------------------------------
+    - kind: SetVariable
+      id: captureQuestion
+      variable: Topic.Question
+      value: =System.Activity.Text
+
+    # -------------------------------------------------------------------------
+    # 2. Reuse the conversation id so follow-up turns keep their context.
+    # -------------------------------------------------------------------------
+    - kind: SetVariable
+      id: ensureConversationId
+      variable: Global.EdgeIqConversationId
+      value: |
+        =If(IsBlank(Global.EdgeIqConversationId),
+            System.Conversation.Id,
+            Global.EdgeIqConversationId)
+
+    - kind: SendActivity
+      id: acknowledge
+      activity: Checking the edge estate...
+
+    # -------------------------------------------------------------------------
+    # 3. Call the orchestrator. This is the ONLY source of operational facts.
+    # -------------------------------------------------------------------------
+    - kind: InvokeConnectorAction
+      id: callOrchestrator
+      connectionReference: edgeiq_orchestrator
+      operationId: askEdgeIQ
+      connectionProperties:
+        mode: UserAuthentication
+      inputs:
+        binding:
+          body:
+            question: =Topic.Question
+            conversationId: =Global.EdgeIqConversationId
+            stream: false
+      output:
+        binding:
+          answer: Topic.Answer
+          route: Topic.Route
+          citations: Topic.Citations
+          approvalRequired: Topic.ApprovalRequired
+          pendingActions: Topic.PendingActions
+          dataSufficiency: Topic.DataSufficiency
+
+    # -------------------------------------------------------------------------
+    # 4. Lead with any data-sufficiency warning. Never suppress it to make the
+    #    answer read more cleanly - a flatlined sensor reads as compliant.
+    # -------------------------------------------------------------------------
+    - kind: ConditionGroup
+      id: dataWarning
+      conditions:
+        - id: degraded
+          condition: =Topic.DataSufficiency.verdict <> "sufficient"
+          actions:
+            - kind: SendActivity
+              id: sendDataWarning
+              activity: |
+                **Data quality caveat** - read the answer with this in mind.
+
+                Completeness: {Topic.DataSufficiency.completenessPct}%
+                {Concat(Topic.DataSufficiency.caveats, Value & Char(10))}
+
+    # -------------------------------------------------------------------------
+    # 5. The answer itself, attributed to the specialist that produced it.
+    # -------------------------------------------------------------------------
+    - kind: SendActivity
+      id: sendAnswer
+      activity: |
+        {Topic.Answer}
+
+        ---
+        Answered by **{First(Topic.Route.agents).Value}**  ·  routing confidence {Round(Topic.Route.confidence * 100, 0)}%
+
+    # -------------------------------------------------------------------------
+    # 6. Evidence. Every operational claim must be traceable to a source.
+    # -------------------------------------------------------------------------
+    - kind: ConditionGroup
+      id: haveCitations
+      conditions:
+        - id: citationsPresent
+          condition: =CountRows(Topic.Citations) > 0
+          actions:
+            - kind: SendActivity
+              id: sendCitations
+              activity: |
+                **Sources**
+                {Concat(Topic.Citations, "[" & id & "] " & title & " (" & docType & ", effective " & effectiveDate & ")" & Char(10))}
+
+    # -------------------------------------------------------------------------
+    # 7. Write actions are proposals only. Approval happens in the console,
+    #    by a named human, never here.
+    # -------------------------------------------------------------------------
+    - kind: ConditionGroup
+      id: approvalGate
+      conditions:
+        - id: needsApproval
+          condition: =Topic.ApprovalRequired = true
+          actions:
+            - kind: SendActivity
+              id: sendProposal
+              activity: |
+                **This is a proposal, not a committed action.**
+
+                {Concat(Topic.PendingActions, "- " & summary & Char(10))}
+
+                Nothing has been written to the maintenance system. Review the
+                evidence above, then approve in the Edge IQ console:
+                [Open Edge IQ]({Global.EdgeIqConsoleUrl}/approvals?conversation={Global.EdgeIqConversationId})
+
+    - kind: SendActivity
+      id: offerFollowUp
+      activity: Anything else you want to dig into on this?

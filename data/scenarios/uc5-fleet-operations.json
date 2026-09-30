@@ -1,0 +1,59 @@
+{
+  "$schema": "./scenario.schema.json",
+  "id": "UC5",
+  "title": "Edge fleet operations and device security",
+  "summary": "The edge estate itself needs operating. Gateways drop out, device twins drift from desired configuration and certificates expire. Edge IQ triages fleet health and distinguishes a connectivity nuisance from a site that has gone dark.",
+  "primaryAgent": "fleet-operations",
+  "supportingAgents": ["knowledge-navigator", "maintenance-planner"],
+  "mcpServers": ["edge_fleet", "asset_registry", "work_order"],
+  "iqLayers": {
+    "fabricIq": "Device inventory, connection state, twin drift and certificate expiry.",
+    "foundryIq": "Edge device hardening SOP and the certificate rotation runbook.",
+    "workIq": "Change records and the OT security review schedule."
+  },
+  "seededFault": {
+    "device": "WTP-01-GW-001",
+    "site": "WTP-01",
+    "behaviour": "14 disconnect events, device twin drifted from desired configuration, and the device certificate expires in 11 days.",
+    "why": "Individually these look like three low-priority tickets. Together they describe a gateway that is about to stop reporting entirely - and it sits at the treatment plant, so losing it means losing visibility of everything upstream of the network.",
+    "tunableIn": "data/generators/generate_telemetry.py -> SCENARIO['uc5_cert_expiry_days']"
+  },
+  "secondFault": {
+    "device": "WELL-09-GW-001",
+    "site": "WELL-09",
+    "behaviour": "No telemetry for 72 hours. Fully offline.",
+    "why": "Already dark. Every downstream analytic for WELL-09 is now working from stale data, and nothing about the data itself says so - the last reading looks perfectly normal, it is just old.",
+    "tunableIn": "data/generators/generate_telemetry.py -> SCENARIO['uc5_offline_device']"
+  },
+  "script": [
+    {
+      "step": 1,
+      "ask": "Show me edge gateways that are offline, drifting from their twin, or have certificates expiring soon.",
+      "expect": "Routes to fleet-operations. Returns both devices with their distinct problems.",
+      "watchFor": "Three different failure classes in one answer - the agent queries fleet state broadly rather than checking one condition."
+    },
+    {
+      "step": 2,
+      "ask": "WELL-09 has been quiet. How long, and what are we blind to?",
+      "expect": "Reports 72 hours offline and names the downstream signals now stale.",
+      "watchFor": "The impact statement is the point. 'Device offline' is a fact; 'you have no abstraction monitoring at WELL-09' is the operational consequence."
+    },
+    {
+      "step": 3,
+      "ask": "Which of these should we deal with first?",
+      "expect": "Triages by consequence, not by count of alerts.",
+      "watchFor": "A defensible ordering with reasoning. The expiring certificate has a hard deadline; the offline well is already costing visibility."
+    },
+    {
+      "step": 4,
+      "ask": "What is our runbook for rotating a device certificate before it expires?",
+      "expect": "knowledge-navigator returns the rotation procedure from the knowledge base.",
+      "watchFor": "knowledge-navigator holds zero MCP tools by design. It answers from governed knowledge only - it cannot touch a device, which is exactly what you want from the agent that reads procedures."
+    }
+  ],
+  "talkingPoints": [
+    "Edge estates fail quietly. A gateway that stops reporting produces no alarm - it produces silence, which looks like calm.",
+    "Certificate expiry is a scheduled outage that nobody scheduled.",
+    "Agent tool entitlements are part of the security design: the knowledge agent has no device access at all."
+  ]
+}

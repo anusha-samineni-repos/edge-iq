@@ -1,0 +1,191 @@
+{
+  "name": "EdgeIQ-Telemetry-Eventstream",
+  "description": "Real-time ingest of IoT Edge telemetry into Fabric Real-Time Intelligence and the OneLake bronze layer.",
+  "$comment": "PLACEHOLDER-READY. Replace every <PLACEHOLDER> token with your tenant values, or let infra/scripts/seed/seed-fabric.ps1 substitute them from the azd environment. Import via the Fabric portal (Real-Time Intelligence > Eventstream > Import) or the Fabric REST API.",
+
+  "properties": {
+    "workspaceId": "<FABRIC_WORKSPACE_ID>",
+    "capacityId": "<FABRIC_CAPACITY_ID>",
+    "retentionDays": 7
+  },
+
+  "sources": [
+    {
+      "name": "iot-hub-telemetry",
+      "type": "AzureIoTHub",
+      "description": "Primary device-to-cloud telemetry from the IoT Edge estate.",
+      "properties": {
+        "iotHubName": "<IOT_HUB_NAME>",
+        "consumerGroupName": "fabric-eventstream",
+        "sharedAccessPolicyName": "service",
+        "sharedAccessKey": "<KEYVAULT:iothub-service-key>",
+        "dataFormat": "Json",
+        "$comment": "Create a DEDICATED consumer group. Sharing the $Default consumer group with another reader causes silent message loss."
+      }
+    },
+    {
+      "name": "eventhub-opc-bridge",
+      "type": "AzureEventHub",
+      "description": "Optional second path for OPC UA / Modbus data arriving via an industrial bridge rather than IoT Edge.",
+      "enabled": false,
+      "properties": {
+        "eventHubNamespace": "<EVENTHUB_NAMESPACE>",
+        "eventHubName": "opc-telemetry",
+        "consumerGroupName": "fabric",
+        "authentication": "ManagedIdentity"
+      }
+    },
+    {
+      "name": "sample-data",
+      "type": "SampleData",
+      "description": "Demo source. Enable this instead of the IoT Hub source to run the whole pipeline with no physical devices.",
+      "enabled": false,
+      "properties": { "sampleDataId": "EdgeIQ-WaterUtility-Demo" }
+    }
+  ],
+
+  "operators": [
+    {
+      "name": "parse-envelope",
+      "type": "ManageFields",
+      "description": "Lift the IoT Hub system properties into first-class columns so downstream joins do not have to dig into nested JSON.",
+      "properties": {
+        "fields": [
+          { "name": "deviceId", "expression": "SystemProperties.connectionDeviceId" },
+          { "name": "enqueuedUtc", "expression": "SystemProperties.enqueuedTime" },
+          { "name": "eventTimeUtc", "expression": "body.timestamp" },
+          { "name": "assetId", "expression": "body.assetId" },
+          { "name": "siteId", "expression": "body.siteId" },
+          { "name": "schemaVersion", "expression": "body.schemaVersion" }
+        ]
+      }
+    },
+    {
+      "name": "filter-invalid",
+      "type": "Filter",
+      "description": "Drop messages with no device identity or no event time. These cannot be attributed and would corrupt the gold aggregates.",
+      "properties": { "condition": "deviceId IS NOT NULL AND eventTimeUtc IS NOT NULL" }
+    },
+    {
+      "name": "late-arrival-window",
+      "type": "ManageFields",
+      "description": "Flag replayed store-and-forward data. When an edge device reconnects it replays its buffer, so messages can arrive hours late and out of order. Downstream logic MUST key on eventTimeUtc, never enqueuedUtc, and must not treat a replay burst as a real-time anomaly.",
+      "properties": {
+        "fields": [
+          { "name": "ingestLagSeconds", "expression": "DATEDIFF(second, eventTimeUtc, enqueuedUtc)" },
+          { "name": "isReplay", "expression": "DATEDIFF(second, eventTimeUtc, enqueuedUtc) > 300" }
+        ]
+      }
+    },
+    {
+      "name": "route-by-payload",
+      "type": "Router",
+      "description": "Split the stream by payload type so each lands in the right bronze table.",
+      "properties": {
+        "routes": [
+          { "name": "telemetry",     "condition": "body.payloadType = 'telemetry'" },
+          { "name": "waterQuality",  "condition": "body.payloadType = 'waterQuality'" },
+          { "name": "dmaFlow",       "condition": "body.payloadType = 'dmaFlow'" },
+          { "name": "alarm",         "condition": "body.payloadType = 'alarm'" },
+          { "name": "deviceEvent",   "condition": "body.payloadType IN ('connectivity','deployment','twin')" }
+        ]
+      }
+    }
+  ],
+
+  "destinations": [
+    {
+      "name": "lakehouse-bronze-telemetry",
+      "type": "Lakehouse",
+      "from": "telemetry",
+      "description": "Append-only raw landing. Never mutate bronze - it is the replayable source of truth.",
+      "properties": {
+        "workspaceId": "<FABRIC_WORKSPACE_ID>",
+        "lakehouseName": "EdgeIQ_Lakehouse",
+        "deltaTableName": "bronze_telemetry",
+        "inputDataFormat": "Json",
+        "partitionBy": ["ingestDate"],
+        "minimumRows": 100000,
+        "maximumDurationSeconds": 120
+      }
+    },
+    {
+      "name": "lakehouse-bronze-water-quality",
+      "type": "Lakehouse",
+      "from": "waterQuality",
+      "properties": {
+        "workspaceId": "<FABRIC_WORKSPACE_ID>",
+        "lakehouseName": "EdgeIQ_Lakehouse",
+        "deltaTableName": "bronze_water_quality",
+        "partitionBy": ["ingestDate"]
+      }
+    },
+    {
+      "name": "lakehouse-bronze-dma-flow",
+      "type": "Lakehouse",
+      "from": "dmaFlow",
+      "properties": {
+        "workspaceId": "<FABRIC_WORKSPACE_ID>",
+        "lakehouseName": "EdgeIQ_Lakehouse",
+        "deltaTableName": "bronze_dma_flow",
+        "partitionBy": ["ingestDate"]
+      }
+    },
+    {
+      "name": "eventhouse-hot-path",
+      "type": "Eventhouse",
+      "from": "telemetry",
+      "description": "KQL database for sub-second operator queries and Real-Time Dashboards. The historian MCP server queries this when EDGEIQ_DATA_BACKEND=azure.",
+      "properties": {
+        "workspaceId": "<FABRIC_WORKSPACE_ID>",
+        "eventhouseName": "EdgeIQ_Eventhouse",
+        "kqlDatabaseName": "EdgeIQ_RTI",
+        "tableName": "Telemetry",
+        "ingestionMappingName": "TelemetryJsonMapping",
+        "retentionPolicyDays": 90,
+        "cachePolicyDays": 14
+      }
+    },
+    {
+      "name": "activator-alerts",
+      "type": "Activator",
+      "from": "alarm",
+      "description": "Data Activator drives the reflex layer - an alarm condition becomes a Teams message, an email, or a call into the Edge IQ orchestrator.",
+      "properties": {
+        "workspaceId": "<FABRIC_WORKSPACE_ID>",
+        "reflexName": "EdgeIQ_Reflex",
+        "$comment": "Configure the rules in the Fabric portal. See fabric/eventstream/activator-rules.md for the recommended starting set."
+      }
+    },
+    {
+      "name": "lakehouse-bronze-device-events",
+      "type": "Lakehouse",
+      "from": "deviceEvent",
+      "properties": {
+        "workspaceId": "<FABRIC_WORKSPACE_ID>",
+        "lakehouseName": "EdgeIQ_Lakehouse",
+        "deltaTableName": "bronze_device_event"
+      }
+    }
+  ],
+
+  "expectedPayloadSchema": {
+    "$comment": "The contract the edge module must publish. Keep schemaVersion so the pipeline can evolve without breaking historical data.",
+    "schemaVersion": "1.0",
+    "payloadType": "telemetry | waterQuality | dmaFlow | alarm | connectivity | deployment | twin",
+    "timestamp": "2026-09-30T14:00:00Z",
+    "deviceId": "WTP-01-PUMP-003",
+    "assetId": "WTP-01-PUMP-003",
+    "siteId": "WTP-01",
+    "measurements": {
+      "vibration_mm_s": 7.9,
+      "bearing_temp_c": 62.4,
+      "motor_current_a": 118.2,
+      "power_kw": 71.5,
+      "flow_m3_h": 640.0,
+      "pressure_bar": 4.2,
+      "suction_pressure_bar": 1.1
+    },
+    "quality": { "completeness": 1.0, "suspect": false }
+  }
+}

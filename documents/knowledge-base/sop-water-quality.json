@@ -1,0 +1,41 @@
+[
+  {
+    "id": "SOP-CL2-001",
+    "title": "SOP: Investigating Low Free Chlorine Residual in Distribution",
+    "docType": "sop",
+    "classification": "internal",
+    "effectiveDate": "2025-03-01",
+    "reviewDate": "2027-03-01",
+    "owner": "Water Quality Manager",
+    "assetClasses": ["analyser"],
+    "useCases": ["UC2"],
+    "source": "documents/knowledge-base/sop-water-quality.json",
+    "content": "PURPOSE. Define the response when an online free chlorine analyser in distribution reports a residual below the internal action level of 0.20 mg/L.\n\nSTEP 1 - VALIDATE THE INSTRUMENT BEFORE THE WATER. The most common cause of an apparent low residual is an analyser fault, not a disinfection failure. Before escalating, confirm all of the following: (a) the reading is not flatlined - a standard deviation below 0.005 mg/L over 24 hours or more indicates a frozen signal or a failed sample line, not stable water; (b) the value is not railed at the sensor floor or ceiling; (c) the analyser is within its calibration interval - 30 days for amperometric cells; (d) sample flow to the panel is above 100 mL/min. A flatlined analyser must be treated as NO DATA, never as a compliant reading.\n\nSTEP 2 - CORROBORATE. Compare against the nearest upstream analyser and the reservoir outlet. A genuine residual loss shows a spatial gradient. A single anomalous point surrounded by healthy neighbours is an instrument problem.\n\nSTEP 3 - CLASSIFY. Residual 0.15-0.20 mg/L with turbidity below 1.0 NTU and no coliform detection is a MONITORING condition: increase sampling frequency to hourly, raise a P3 work order for analyser inspection. Residual below 0.15 mg/L, OR any residual loss accompanied by turbidity above 1.0 NTU, OR any coliform detection is an ESCALATION condition.\n\nSTEP 4 - ESCALATE. On an escalation condition, notify the duty Water Quality Manager within 30 minutes. Initiate targeted flushing at the downstream hydrant. Take a manual grab sample for laboratory confirmation - the regulator will require the lab result, not the online reading. Consider booster chlorination.\n\nSTEP 5 - BOIL WATER NOTICE. A boil water notice is a public-health decision that is NEVER made by an automated system or by operations alone. It requires the Water Quality Manager plus the Regulatory Liaison, with reference to the relevant regulation. Agents must present the evidence and the decision criteria and must stop there.\n\nRECORD. Log every step in the water quality incident record with timestamps."
+  },
+  {
+    "id": "SOP-CL2-002",
+    "title": "SOP: Online Analyser Validation and Calibration",
+    "docType": "sop",
+    "classification": "internal",
+    "effectiveDate": "2025-01-15",
+    "reviewDate": "2027-01-15",
+    "owner": "Instrumentation Team Lead",
+    "assetClasses": ["analyser"],
+    "useCases": ["UC2", "UC5"],
+    "source": "documents/knowledge-base/sop-water-quality.json",
+    "content": "SCOPE. All online chlorine, turbidity, pH and conductivity analysers feeding the compliance and edge analytics platform.\n\nCALIBRATION INTERVALS. Amperometric free chlorine cell: 30 days. Colorimetric DPD chlorine: 90 days. Turbidimeter: 90 days with a formazin standard. pH: 30 days, two-point. Conductivity: 180 days. An analyser past its interval produces readings that are ADVISORY ONLY and may not be used as evidence of compliance.\n\nAUTOMATED VALIDITY TESTS. The platform applies four tests continuously and any failure marks the tag suspect. FLATLINE: rolling 24h standard deviation below 0.005 mg/L for chlorine, 0.01 NTU for turbidity. RAILED: value pinned at the configured sensor minimum or maximum for more than 2 hours. DRIFT: a monotonic trend exceeding 20% of span over 7 days with no corresponding process change. STALE: no new sample received for more than 3 sampling intervals.\n\nRESPONSE. A suspect tag raises a P3 instrumentation work order automatically. Compliance reporting excludes suspect periods and records them as data gaps - it never interpolates across them. Never silently substitute a value.\n\nPOST-CALIBRATION. Record the as-found and as-left values. An as-found error exceeding 20% of the action level requires a retrospective review of the preceding period and may constitute a reportable data quality failure."
+  },
+  {
+    "id": "SOP-CL2-003",
+    "title": "SOP: Reservoir Turnover and Residual Maintenance",
+    "docType": "sop",
+    "classification": "internal",
+    "effectiveDate": "2025-06-01",
+    "reviewDate": "2027-06-01",
+    "owner": "Distribution Operations Manager",
+    "assetClasses": ["analyser", "valve"],
+    "useCases": ["UC2"],
+    "source": "documents/knowledge-base/sop-water-quality.json",
+    "content": "BACKGROUND. Free chlorine decays with time, temperature and reactive demand. Service reservoirs with poor turnover develop stratified, aged water with depressed residual at the outlet, most pronounced in summer and in oversized reservoirs during low-demand periods.\n\nDIAGNOSTIC SIGNATURE. Reservoir residual decay presents as a slow monotonic decline over days rather than a step change, correlates with rising water temperature, and is worse at low throughput. A step change instead indicates a dosing failure or an instrument fault.\n\nINTERVENTIONS IN ORDER OF PREFERENCE. 1) Increase turnover by adjusting the outlet control valve or reservoir level band to raise throughput. 2) Reduce the operating level band to lower residence time. 3) Install or commission an inlet mixing system. 4) Booster chlorination at the reservoir outlet - effective but adds a chemical dosing point requiring its own monitoring and controls, so treat it as a last resort.\n\nTARGET. Maintain reservoir residence time below 48 hours at average demand. Above 72 hours, residual loss is expected and the reservoir should be reviewed for resizing or re-zoning."
+  }
+]
