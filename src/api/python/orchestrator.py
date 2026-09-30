@@ -176,7 +176,19 @@ class Orchestrator:
             if event["type"] == "delta":
                 chunks.append(event["text"])
             elif event["type"] == "final":
-                result = TurnResult(**event["result"])
+                r = event["result"]
+                result = TurnResult(
+                    conversation_id=r["conversationId"],
+                    answer=r["answer"],
+                    citations=r["citations"],
+                    route=r["route"],
+                    layer_status=r["layerStatus"],
+                    agents_used=r["agentsUsed"],
+                    pending_approvals=r["pendingApprovals"],
+                    elapsed_ms=r["elapsedMs"],
+                )
+            elif event["type"] == "error":
+                raise RuntimeError(event["message"])
         if result is None:  # pragma: no cover
             result = TurnResult(conversation_id=conversation_id or "", answer="".join(chunks))
         if not result.answer:
@@ -240,10 +252,29 @@ class Orchestrator:
             }
 
             answer_parts: list[str] = []
-            async for text in self._run(prompt, decision):
-                clean = _MARKER_RE.sub(lambda m: f"[{m.group(1)}]", text)
-                answer_parts.append(clean)
-                yield {"type": "delta", "text": clean}
+            out_of_scope = (
+                not decision.agents
+                and not context.knowledge
+                and not context.device_ids
+                and not context.site_ids
+                and not context.entities
+            )
+            if out_of_scope:
+                decision.rationale = "Out of scope: no water-utility vocabulary, assets or knowledge matched."
+                text = (
+                    "I'm Edge IQ, the assistant for the water utility's IoT Edge estate. That question "
+                    "doesn't relate to our devices, sites, water quality, leakage, energy or maintenance, "
+                    "so I can't answer it from grounded sources.\n\nTry, for example: *\"Which edge gateways "
+                    "have certificates expiring in the next 30 days?\"* or *\"Is PUMP-003 at WTP-01 "
+                    "healthy?\"*"
+                )
+                answer_parts.append(text)
+                yield {"type": "delta", "text": text}
+            else:
+                async for text in self._run(prompt, decision):
+                    clean = _MARKER_RE.sub(lambda m: f"[{m.group(1)}]", text)
+                    answer_parts.append(clean)
+                    yield {"type": "delta", "text": clean}
 
             answer = "".join(answer_parts).strip()
             elapsed = int((time.perf_counter() - started) * 1000)
@@ -254,7 +285,7 @@ class Orchestrator:
                 citations=context.citations(),
                 route=decision.to_dict(),
                 layer_status=context.layer_status,
-                agents_used=decision.agents or ["magentic-plan"],
+                agents_used=decision.agents or (["out-of-scope"] if out_of_scope else ["magentic-plan"]),
                 pending_approvals=approvals,
                 elapsed_ms=elapsed,
             )
@@ -383,6 +414,12 @@ class Orchestrator:
         )
         return "\n".join(parts)
 
+    _WRITE_SYNONYMS = {
+        "create": ("create", "raise", "open", "log", "issue", "book", "schedule"),
+        "update": ("update", "change", "modify", "amend", "reprioriti"),
+        "assign": ("assign", "allocate", "dispatch"),
+    }
+
     def _pending_approvals(self, question: str, decision: RouteDecision) -> list[dict]:
         approvals: list[dict] = []
         lowered = question.lower()
@@ -393,7 +430,15 @@ class Orchestrator:
                 continue
             for action in spec.requires_approval_for:
                 verb = action.replace("_", " ")
-                if verb in lowered or action in lowered or verb.split()[0] in lowered:
+                head = verb.split()[0]
+                obj = verb.split(" ", 1)[1] if " " in verb else ""
+                synonyms = self._WRITE_SYNONYMS.get(head, (head,))
+                obj_hit = not obj or obj in lowered or obj.replace(" ", "") in lowered or (
+                    "work order" in obj and re.search(r"\b(wo|ticket|job)\b", lowered)
+                )
+                if verb in lowered or action in lowered or (
+                    obj_hit and any(re.search(rf"\b{s}", lowered) for s in synonyms)
+                ):
                     approvals.append({"agent": name, "action": action})
         return approvals
 

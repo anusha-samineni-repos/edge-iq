@@ -29,6 +29,15 @@ from ..config import FoundryIQSettings
 logger = logging.getLogger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
+
+_STOPWORDS = {
+    "the", "and", "for", "what", "which", "who", "why", "how", "when", "where", "are", "was",
+    "were", "with", "that", "this", "there", "their", "from", "into", "about", "any", "all",
+    "has", "have", "had", "can", "could", "should", "would", "will", "does", "did", "our",
+    "you", "your", "its", "not", "but", "yet", "been", "being", "next", "last", "days",
+    "day", "hours", "week", "today", "now", "show", "tell", "give", "list", "please", "is",
+    "of", "in", "on", "a", "an", "to", "me", "my", "we", "us", "it", "be", "do",
+}
 _LOCAL_CORPUS = _REPO_ROOT / "documents" / "knowledge-base"
 
 
@@ -187,7 +196,13 @@ class FoundryIQ:
         max_classification: str,
     ) -> list[KnowledgeChunk]:
         allowed = set(_allowed_classifications(max_classification).split(","))
-        terms = [t for t in re.split(r"\W+", query.lower()) if len(t) > 2]
+        self.last_backend = "local"
+        terms = [
+            t for t in re.split(r"\W+", query.lower())
+            if len(t) > 2 and t not in _STOPWORDS
+        ]
+        if not terms:
+            return []
         scored: list[tuple[float, KnowledgeChunk]] = []
         for chunk in self._load_local():
             if chunk.classification not in allowed:
@@ -197,12 +212,20 @@ class FoundryIQ:
             if asset_class and chunk.asset_classes and asset_class not in chunk.asset_classes:
                 continue
             haystack = f"{chunk.title} {chunk.content}".lower()
-            score = sum(haystack.count(term) for term in terms)
+            matched_terms = [term for term in terms if term in haystack]
+            # Require at least two distinct query terms (or one for short queries) to count as relevant.
+            if len(matched_terms) < min(2, len(terms)):
+                continue
+            score = sum(haystack.count(term) for term in matched_terms)
             # Title hits are worth far more than body hits.
             score += 5 * sum(1 for term in terms if term in chunk.title.lower())
             if score:
                 scored.append((float(score), chunk))
         scored.sort(key=lambda pair: pair[0], reverse=True)
+        if scored:
+            # Drop weak tail matches relative to the best hit.
+            floor = scored[0][0] * 0.25
+            scored = [pair for pair in scored if pair[0] >= floor]
         out = []
         for score, chunk in scored[:top_k]:
             chunk.score = score

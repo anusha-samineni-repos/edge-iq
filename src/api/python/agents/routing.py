@@ -57,15 +57,25 @@ _HARD_RULES: list[tuple[re.Pattern, str, str]] = [
     (re.compile(r"\b(sop|procedure|how do i|step[- ]by[- ]step|runbook|work instruction)\b"),
      "knowledge-navigator",
      "Procedural request."),
-    (re.compile(r"\b(certificate|cert)\s+(expir\w+|renew\w+|rotat\w+)\b"), "fleet-operations",
+    (re.compile(r"\b(certificat\w*|certs?)\b.*\b(expir\w*|renew\w*|rotat\w*)\b"), "fleet-operations",
      "Device identity lifecycle belongs to fleet operations."),
     (re.compile(r"\b(module twin|twin drift|deployment manifest|config drift)\b"), "fleet-operations",
      "IoT Edge configuration management."),
 ]
 
 
+_BRIEFING = re.compile(
+    r"\b(briefing|morning report|shift handover|estate|whole (fleet|network|system)|"
+    r"overall status|status overview|what needs my attention|summary of everything)\b"
+)
+_BRIEFING_AGENTS = ["fleet-operations", "asset-health", "water-quality", "leak-detection", "energy-optimizer"]
+
+
 def _tokenize(text: str) -> list[str]:
-    return [t for t in re.split(r"\W+", text.lower()) if t]
+    tokens = [t for t in re.split(r"\W+", text.lower()) if t]
+    # Tolerate simple plurals so "certificates" hits the "certificate" trigger.
+    extra = [t[:-1] for t in tokens if len(t) > 3 and t.endswith("s") and not t.endswith("ss")]
+    return tokens + extra
 
 
 def route(question: str, *, entities: list[str] | None = None) -> RouteDecision:
@@ -73,6 +83,15 @@ def route(question: str, *, entities: list[str] | None = None) -> RouteDecision:
     tokens = set(_tokenize(question))
     lowered = question.lower()
     entities = entities or []
+
+    if _BRIEFING.search(lowered):
+        return RouteDecision(
+            agents=list(_BRIEFING_AGENTS),
+            scores={name: 1.0 for name in _BRIEFING_AGENTS},
+            confidence=1.0,
+            strategy="parallel",
+            rationale="Estate-wide briefing: running every operational specialist in parallel.",
+        )
 
     scores: dict[str, float] = {}
     hits: dict[str, list[str]] = {}

@@ -83,14 +83,14 @@ def test_api_image() -> None:
         pythonpath = env.get("PYTHONPATH", "")
         check("PYTHONPATH is set", bool(pythonpath))
 
-        foundry = root / pythonpath.lstrip("/") / "iq" / "foundry_iq.py"
+        foundry = root / pythonpath.lstrip("/") / "api" / "python" / "iq" / "foundry_iq.py"
         check("foundry_iq.py on PYTHONPATH", foundry.exists(), str(foundry))
 
-        fabric = root / pythonpath.lstrip("/") / "iq" / "fabric_iq.py"
+        fabric = root / pythonpath.lstrip("/") / "api" / "python" / "iq" / "fabric_iq.py"
         check("fabric_iq.py on PYTHONPATH", fabric.exists())
 
-        app_py = root / pythonpath.lstrip("/") / "app.py"
-        check("app.py importable as 'app'", app_py.exists())
+        app_py = root / pythonpath.lstrip("/") / "api" / "python" / "app.py"
+        check("app.py importable as 'api.python.app'", app_py.exists())
 
         # foundry_iq.py: _REPO_ROOT = parents[4] -> documents/knowledge-base
         if foundry.exists():

@@ -31,6 +31,8 @@ RUN pip install --no-cache-dir -r /app/requirements.txt \
  && pip install --no-cache-dir gunicorn==23.0.0 uvicorn[standard]==0.34.0
 
 COPY src/api/python/ /app/src/api/python/
+# Demo-mode specialists call the MCP tool functions in-process.
+COPY src/mcp_servers/ /app/src/mcp_servers/
 
 # Grounding assets. The ontology and knowledge base are read at startup; the
 # generated dataset backs demo mode and the local Fabric IQ fallback.
@@ -51,7 +53,7 @@ RUN useradd --create-home --uid 10001 edgeiq \
  && chown -R edgeiq:edgeiq /app
 USER edgeiq
 
-ENV PYTHONPATH=/app/src/api/python \
+ENV PYTHONPATH=/app/src \
     EDGEIQ_DEMO_DATA_PATH=data/customdata \
     FABRIC_ONTOLOGY_PATH=fabric/ontology/water_utility_ontology.yaml \
     PORT=8000
@@ -64,4 +66,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD curl -fsS http://localhost:${PORT}/api/health || exit 1
 
-CMD ["gunicorn", "app:app", "--config", "/app/gunicorn.conf.py"]
+CMD ["gunicorn", "api.python.app:app", "--config", "/app/gunicorn.conf.py"]

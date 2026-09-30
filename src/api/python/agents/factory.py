@@ -173,11 +173,26 @@ class _LocalAgent:
         self.name = spec.name
 
     async def run(self, prompt: str, **_: Any) -> str:
-        return self._compose(prompt)
+        return await self._compose_async(prompt)
 
     async def run_stream(self, prompt: str, **_: Any):
-        for line in self._compose(prompt).splitlines(keepends=True):
+        for line in (await self._compose_async(prompt)).splitlines(keepends=True):
             yield line
+
+    async def _compose_async(self, prompt: str) -> str:
+        from .demo_findings import compose
+
+        try:
+            findings = await compose(self.name, prompt)
+        except Exception as exc:  # keep the demo resilient
+            findings = f"_Tool call failed in demo mode: {exc}_"
+        if not findings:
+            return self._compose(prompt)
+        return (
+            f"{findings}\n\n"
+            f"_Source: {self.spec.display_name} via MCP tools ({', '.join(self.spec.mcp_servers) or 'knowledge'}) "
+            f"on demo data - no LLM was called._\n"
+        )
 
     def _compose(self, prompt: str) -> str:
         context_block = ""

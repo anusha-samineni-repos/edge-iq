@@ -134,6 +134,18 @@ class UnifiedContext:
         ]
 
 
+def _describe_status(layer: str, outcome: object) -> str:
+    """Report honestly whether a layer hit a real backend or a local stand-in."""
+    if layer == "work_iq":
+        return "ok" if getattr(outcome, "configured", True) else "placeholder (M365 not configured)"
+    if layer == "fabric_iq":
+        source = getattr(outcome, "source", "")
+        return "demo (local data)" if source == "local-demo" else "ok"
+    if layer == "foundry_iq":
+        return "ok"
+    return "ok"
+
+
 async def build_unified_context(
     question: str,
     *,
@@ -187,10 +199,12 @@ async def build_unified_context(
                 layer_status[layer] = f"error: {outcome}"
             else:
                 results[layer] = outcome
-                layer_status[layer] = "ok"
+                layer_status[layer] = _describe_status(layer, outcome)
 
     for layer in ("foundry_iq", "fabric_iq", "work_iq"):
         layer_status.setdefault(layer, "skipped")
+    if layer_status.get("foundry_iq") == "ok" and getattr(foundry_iq, "last_backend", "") == "local":
+        layer_status["foundry_iq"] = "local (knowledge base files)"
 
     return UnifiedContext(
         question=question,

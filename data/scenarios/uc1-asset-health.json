@@ -14,7 +14,7 @@
   "seededFault": {
     "device": "WTP-01-PUMP-003",
     "site": "WTP-01",
-    "signal": "vibration_rms_mm_s",
+    "signal": "vibration_mm_s",
     "behaviour": "Exponential rise beginning 12 days ago, reaching 7.9 mm/s today.",
     "why": "7.9 mm/s puts a 75 kW machine in ISO 10816-3 zone D - unacceptable, damage is occurring. The >75 kW band (C/D limit 11.0) would call the same value zone C, which is why the agent must read rated power from the asset registry rather than assume a threshold.",
     "linkedRecords": {

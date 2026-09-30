@@ -96,6 +96,9 @@ async def version():
 
 
 _static = Path(__file__).parent / "static"
+if not _static.exists():
+    # Local dev: serve the console straight from the Vite build output.
+    _static = Path(__file__).resolve().parents[2] / "App" / "dist"
 if _static.exists():
     app.mount("/assets", StaticFiles(directory=_static / "assets"), name="assets")
 
