@@ -69,6 +69,26 @@ cd C:\IQAgent\edge-iq
 .\.venv\Scripts\python.exe infra\scripts\ask_foundry_agent.py "WTP-01-PUMP-003 vibration p95 is 8.0 mm/s on a 75 kW pump. Which ISO 10816-3 zone is that, what should we do, and which specialist owns it?"
 ```
 
+### Example test run (actual output)
+
+```text
+(.venv) PS C:\IQAgent\edge-iq> .\.venv\Scripts\python.exe infra\scripts\ask_foundry_agent.py "WTP-01-PUMP-003 vibration p95 is 8.0 mm/s on a 75 kW pump. Which ISO 10816-3 zone is that, what should we do, and which specialist owns it?"
+Q: WTP-01-PUMP-003 vibration p95 is 8.0 mm/s on a 75 kW pump. Which ISO 10816-3 zone is that, what should we do, and which specialist owns it?
+run: RunStatus.COMPLETED
+
+The vibration p95 of 8.0 mm/s RMS velocity on the 75 kW pump WTP-01-PUMP-003 places it in ISO 10816-3 Zone C, which is an unsatisfactory condition indicating potential damage. Immediate detailed inspection and planning for an overhaul are recommended due to the high urgency, as continued operation risks catastrophic failure and water supply disruption. The asset-health specialist owns this issue and should lead the diagnosis and intervention planning.
+
+What I checked: Asset Health IQ for vibration severity, ISO 10816-3 standards, failure mode and RUL estimates.
+```
+
+What this run confirms:
+
+- The orchestrator run completes.
+- It routes the question to the **asset-health** specialist.
+- It returns a recommended action.
+
+> **Known gap:** the zone in this answer is wrong. For a 75 kW machine (ISO 10816-3 group 2), the zone boundaries are 1.4, 2.8 and 4.5 mm/s on rigid foundations, or 2.3, 4.5 and 7.1 mm/s on flexible ones. Either way, 8.0 mm/s is **Zone D** (damage likely, stop the machine), not Zone C. The cloud agents do not have their MCP tools attached yet, because the MCP gateway only runs locally, so they answer from model knowledge. The local demo, which calls the MCP tools, answers Zone D correctly. To fix this, register the agents with `--gateway-url` pointing at the deployed MCP gateway (see [DEPLOY_TO_PRODUCTION.md](./DEPLOY_TO_PRODUCTION.md), step 6.3).
+
 Override the target with the `AZURE_AI_FOUNDRY_PROJECT_ENDPOINT` and `AZURE_AI_FOUNDRY_ORCHESTRATOR_AGENT_ID` environment variables.
 
 To use these cloud agents from the local web console instead of demo mode, set:
