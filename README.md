@@ -143,6 +143,8 @@ Each has a seeded fault and a question script in
 
 ## Deploy to Azure
 
+> **Current deployment:** agents are live in Foundry project `aif-vwcdscvow6xdu-proj` (resource group `rg-iot-edge-pm-dev`). See [AZURE_RESOURCES.md](AZURE_RESOURCES.md) for every resource, the agent IDs, and the terminal command to run the main agent (`edgeiq-orchestrator`).
+
 ```bash
 azd auth login
 azd env new edgeiq-dev
