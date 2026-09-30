@@ -31,8 +31,8 @@ python -m uvicorn mcp_servers.gateway:app --port 8080
 
 # terminal 2
 set EDGEIQ_DEMO_MODE=true
-set PYTHONPATH=src/api/python
-python -m uvicorn app:app --port 8000 --reload
+set PYTHONPATH=src
+python -m uvicorn api.python.app:app --port 8000 --reload
 ```
 
 Optional console (needs Node 20+):

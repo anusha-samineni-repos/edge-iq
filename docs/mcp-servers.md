@@ -88,7 +88,7 @@ depend on rated power:
 | 15–75 kW | 2.3 | 4.5 | 7.1 |
 | > 75 kW | 3.5 | 7.1 | 11.0 |
 
-7.9 mm/s is zone D on a 75 kW machine and zone C on a 45 kW one. An agent that
+7.9 mm/s is zone D on a 75 kW machine and only zone C on a 90 kW one. An agent that
 assumes a threshold instead of reading rated power will be confidently wrong
 about half the estate.
 
