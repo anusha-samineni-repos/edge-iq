@@ -57,6 +57,66 @@ curl -X POST localhost:8000/api/chat \
 
 Walkthrough: [docs/demo-guide.md](./docs/demo-guide.md)
 
+### Example commands (PowerShell, from the repo root)
+
+**Local web app with UX (demo mode)**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r src\api\python\requirements.txt -r src\mcp_servers\requirements.txt
+
+# terminal 1 - MCP gateway (5 MCP servers)
+$env:PYTHONPATH = "src"
+.\.venv\Scripts\python.exe -m uvicorn mcp_servers.gateway:app --port 8080
+
+# terminal 2 - build the UI once, then run the API (serves the UI at http://localhost:8000)
+cd src\App; npm install; npm run build; cd ..\..
+$env:PYTHONPATH = "src"; $env:EDGEIQ_DEMO_MODE = "true"
+.\.venv\Scripts\python.exe -m uvicorn api.python.app:app --port 8000
+```
+
+**Call the API**
+
+```powershell
+Invoke-RestMethod http://localhost:8000/api/health
+Invoke-RestMethod http://localhost:8000/api/agents
+
+# Non-streaming chat
+$body = @{ message = "Vibration on WTP-01-PUMP-003 is climbing. What is the ISO zone?"; stream = $false } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/chat -ContentType "application/json" -Body $body
+
+# Which agents would handle a prompt (no execution)
+$body = @{ message = "Give me the morning briefing for the whole estate" } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/route-preview -ContentType "application/json" -Body $body
+
+# Streaming (SSE) with curl
+curl.exe -N -X POST http://localhost:8000/api/chat -H "Content-Type: application/json" -d "{\"message\":\"Is there a leak in DMA-07?\",\"stream\":true}"
+```
+
+**Tests**
+
+```powershell
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m pytest
+```
+
+**Cloud agents in Microsoft Foundry** (see [AZURE_RESOURCES.md](./AZURE_RESOURCES.md))
+
+```powershell
+az login
+# Ask the main agent (edgeiq-orchestrator)
+.\.venv\Scripts\python.exe infra\scripts\ask_foundry_agent.py "Vibration on WTP-01-PUMP-003 is 6.2 mm/s. What ISO 10816 zone is it and what should we do?"
+.\.venv\Scripts\python.exe infra\scripts\ask_foundry_agent.py "Which edge gateways have certificates expiring in the next 30 days?"
+.\.venv\Scripts\python.exe infra\scripts\ask_foundry_agent.py "Chlorine residual at Reservoir R-02 dropped to 0.3 mg/L. Is that a compliance issue?"
+
+# Register / update / remove the 8 agents
+$ep = "https://aif-vwcdscvow6xdu.services.ai.azure.com/api/projects/aif-vwcdscvow6xdu-proj"
+.\.venv\Scripts\python.exe infra\scripts\seed\register_agents.py --project-endpoint $ep --model gpt-4.1-mini --dry-run
+.\.venv\Scripts\python.exe infra\scripts\seed\register_agents.py --project-endpoint $ep --model gpt-4.1-mini --gateway-url https://<mcp-gateway-fqdn>
+.\.venv\Scripts\python.exe infra\scripts\seed\register_agents.py --project-endpoint $ep --delete
+```
+
+**Deploy to Azure**: full click-by-click guide in [DEPLOY_TO_PRODUCTION.md](./DEPLOY_TO_PRODUCTION.md).
+
 ---
 
 ## Architecture
