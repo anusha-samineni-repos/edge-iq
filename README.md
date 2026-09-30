@@ -125,6 +125,8 @@ Each has a seeded fault and a question script in
 
 ## Documentation
 
+- [ARCHITECTURE_FLOW.md](ARCHITECTURE_FLOW.md): end-to-end flow of a question through every layer
+
 | | |
 |---|---|
 | [Architecture](./docs/architecture.md) | Components and request flow |
